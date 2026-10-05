@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { NAV_ITEMS } from "@/lib/navigation";
 import { hasPermission } from "@/lib/permissions";
-import { useSessionStore } from "@/lib/session-store";
+import { useSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipProvider } from "@/components/ui/tooltip";
 
@@ -20,8 +20,8 @@ export interface SidebarNavProps {
  */
 export function SidebarNav({ collapsed, onNavigate }: SidebarNavProps) {
   const pathname = usePathname();
-  const session = useSessionStore((s) => s.session);
-  const visibleItems = NAV_ITEMS.filter((item) => hasPermission(session, item.permission ?? ""));
+  const { data: session } = useSession();
+  const visibleItems = NAV_ITEMS.filter((item) => !item.permission || hasPermission(session, item.permission));
 
   return (
     <TooltipProvider>

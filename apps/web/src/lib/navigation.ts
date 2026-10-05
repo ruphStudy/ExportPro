@@ -9,10 +9,13 @@ import {
   Package,
   Settings,
   Ship,
+  ShieldCheck,
   Truck,
+  UserRound,
   Users,
   type LucideIcon,
 } from "lucide-react";
+import type { Permission } from "@exportpro/types";
 
 export interface NavItem {
   label: string;
@@ -24,8 +27,8 @@ export interface NavItem {
    * never a dead link, and never a fake implemented feature either.
    */
   status: "active" | "placeholder";
-  /** Required permission string — see lib/permissions.ts. No-op until Sprint 2's RBAC lands. */
-  permission?: string;
+  /** Required permission — see lib/permissions.ts. Omit for pages every authenticated member can see (e.g. their own profile/security). */
+  permission?: Permission;
   description: string;
 }
 
@@ -108,11 +111,34 @@ export const NAV_ITEMS: NavItem[] = [
     description: "Profitability and trade analytics.",
   },
   {
-    label: "Settings",
+    label: "Team",
+    href: "/team",
+    icon: Users,
+    status: "active",
+    permission: "team.view",
+    description: "Manage organization members, roles, and invitations.",
+  },
+  {
+    label: "Organization Settings",
     href: "/settings",
     icon: Settings,
-    status: "placeholder",
-    description: "Organization, team, and account settings.",
+    status: "active",
+    permission: "organization.view",
+    description: "Company identity, contact, address, and branding.",
+  },
+  {
+    label: "Profile",
+    href: "/profile",
+    icon: UserRound,
+    status: "active",
+    description: "Your personal account details.",
+  },
+  {
+    label: "Security",
+    href: "/security",
+    icon: ShieldCheck,
+    status: "active",
+    description: "Password, active sessions, and devices.",
   },
 ];
 

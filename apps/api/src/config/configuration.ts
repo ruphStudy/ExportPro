@@ -13,13 +13,10 @@ export function buildConfiguration(env: EnvConfig) {
       port: env.PORT,
       globalPrefix: env.API_GLOBAL_PREFIX,
       corsOrigin: env.CORS_ORIGIN,
+      frontendUrl: env.FRONTEND_URL,
     },
     database: {
       url: env.DATABASE_URL,
-    },
-    auth: {
-      jwtSecret: env.JWT_SECRET,
-      jwtExpiresIn: env.JWT_EXPIRES_IN,
     },
     ai: {
       apiKey: env.AI_PROVIDER_API_KEY,

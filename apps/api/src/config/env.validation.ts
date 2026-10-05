@@ -15,14 +15,12 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(4000),
   API_GLOBAL_PREFIX: z.string().default('api/v1'),
   CORS_ORIGIN: z.string().default('http://localhost:3000'),
+  // Base URL of the frontend — used to build links in emails (verification,
+  // password reset, team invitations). Must not have a trailing slash.
+  FRONTEND_URL: z.string().default('http://localhost:3000'),
 
   // Database
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
-
-  // Auth foundation (real auth lands in Sprint 2; placeholders validated now
-  // so the shape is locked in and Sprint 2 doesn't need an env migration)
-  JWT_SECRET: z.string().optional(),
-  JWT_EXPIRES_IN: z.string().default('15m'),
 
   // AI provider (future sprint)
   AI_PROVIDER_API_KEY: z.string().optional(),

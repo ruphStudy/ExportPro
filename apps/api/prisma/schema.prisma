@@ -1,6 +1,5 @@
-// Prisma schema — Sprint 1 foundation.
-// Only the minimum tenancy/identity/audit models required to unblock
-// Sprint 2 (auth + organization onboarding) are defined here.
+// Prisma schema — Sprint 1 (tenancy/audit foundation) + Sprint 2
+// (authentication, sessions, organization identity, invitations).
 // Business-domain models (products, opportunities, buyers, CRM, etc.)
 // are intentionally NOT created yet — see ARCHITECTURE.md.
 
@@ -14,16 +13,20 @@ datasource db {
 }
 
 /// Role a user holds within a single organization (tenant).
-/// Deliberately a flat enum for Sprint 1 — swap for a Role/Permission
-/// table set in a later sprint if per-org custom roles are needed.
+/// Deliberately a flat enum — see ARCHITECTURE.md "Roles & Permissions"
+/// for why this is static rather than a Role/Permission table.
 enum MembershipRole {
   OWNER
   ADMIN
-  MEMBER
+  EXPORT_MANAGER
+  SALES
+  DOCUMENTATION
+  LOGISTICS
+  FINANCE
+  VIEWER
 }
 
 enum MembershipStatus {
-  INVITED
   ACTIVE
   SUSPENDED
   REMOVED
@@ -36,42 +39,151 @@ enum TradeDirection {
   IMPORT
 }
 
+enum BusinessType {
+  MANUFACTURER
+  MERCHANT_EXPORTER
+  TRADER
+  IMPORTER
+  EXPORTER_IMPORTER
+}
+
+enum VerificationPurpose {
+  EMAIL_VERIFICATION
+}
+
 /// A person who can sign in. Identity is global; all tenant-scoped data
 /// hangs off Membership, never directly off User, so one person can
 /// belong to several organizations without data leaking between them.
 model User {
-  id            String   @id @default(cuid())
-  email         String   @unique
-  fullName      String?
-  avatarUrl     String?
-  isActive      Boolean  @default(true)
-  lastLoginAt   DateTime?
+  id              String    @id @default(cuid())
+  /// Always stored lowercased/trimmed — see AuthService.normalizeEmail().
+  /// No separate "normalizedEmail" column: the single column IS normalized.
+  email           String    @unique
+  passwordHash    String
+  firstName       String
+  lastName        String
+  phone           String?
+  avatarUrl       String?
+  emailVerifiedAt DateTime?
+  isActive        Boolean   @default(true)
+  lastLoginAt     DateTime?
 
-  memberships   Membership[]
-  auditLogs     AuditLog[]
+  memberships          Membership[]
+  auditLogs            AuditLog[]
+  sessions             Session[]
+  verificationTokens   VerificationToken[]
+  passwordResetTokens  PasswordResetToken[]
+  sentInvitations      OrganizationInvitation[]
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("users")
+}
+
+/// One row per logged-in browser/device. The HttpOnly session cookie
+/// carries an opaque token; only its SHA-256 hash is ever persisted —
+/// see ARCHITECTURE.md "Authentication Architecture".
+model Session {
+  id          String   @id @default(cuid())
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  tokenHash   String   @unique
+
+  /// Server-resolved "current organization" for this device, persisted
+  /// here (not trusted from the client) so it survives refresh and the
+  /// organization switcher. Nullable until the user has a membership.
+  activeOrganizationId String?
+
+  userAgent   String?
+  ipAddress   String?
+  rememberMe  Boolean  @default(false)
+
+  createdAt   DateTime @default(now())
+  lastUsedAt  DateTime @default(now())
+  expiresAt   DateTime
+  revokedAt   DateTime?
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+/// Short-lived OTP for email verification. The code itself is never
+/// stored — only its hash — and it is single-use (consumedAt) and
+/// rate-limited by `attempts`.
+model VerificationToken {
+  id          String              @id @default(cuid())
+
+  userId      String
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  codeHash    String
+  purpose     VerificationPurpose @default(EMAIL_VERIFICATION)
+  attempts    Int                 @default(0)
+
+  expiresAt   DateTime
+  consumedAt  DateTime?
+
+  createdAt   DateTime            @default(now())
+
+  @@index([userId, purpose])
+  @@map("verification_tokens")
+}
+
+/// Single-use password reset token. The raw token is emailed to the
+/// user and never stored — only its hash.
+model PasswordResetToken {
+  id          String    @id @default(cuid())
+
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  tokenHash   String    @unique
+  expiresAt   DateTime
+  consumedAt  DateTime?
+
+  createdAt   DateTime  @default(now())
+
+  @@index([userId])
+  @@map("password_reset_tokens")
 }
 
 /// A tenant. Every piece of business data created in later sprints must
 /// carry an organizationId that traces back here — this is the root of
 /// the multi-tenancy strategy (see ARCHITECTURE.md "Tenant Isolation").
 model Organization {
-  id            String   @id @default(cuid())
-  name          String
-  slug          String   @unique
+  id              String           @id @default(cuid())
+  name            String
+  legalName       String?
+  slug            String           @unique
+  businessType    BusinessType?
+  industry        String?
+  website         String?
+  email           String?
+  phone           String?
+  logoUrl         String?
+
+  addressLine1    String?
+  addressLine2    String?
+  city            String?
+  state           String?
+  postalCode      String?
+  country         String?
+
+  timezone        String           @default("UTC")
+  defaultCurrency String           @default("USD")
   tradeDirections TradeDirection[] @default([EXPORT])
-  settings      Json?    @default("{}")
-  isActive      Boolean  @default(true)
+  settings        Json?            @default("{}")
+  isActive        Boolean          @default(true)
 
   memberships   Membership[]
   auditLogs     AuditLog[]
+  invitations   OrganizationInvitation[]
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("organizations")
 }
@@ -87,9 +199,8 @@ model Membership {
   organizationId String
   organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  role           MembershipRole   @default(MEMBER)
+  role           MembershipRole   @default(VIEWER)
   status         MembershipStatus @default(ACTIVE)
-  invitedEmail   String?
 
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
@@ -97,6 +208,33 @@ model Membership {
   @@unique([userId, organizationId])
   @@index([organizationId])
   @@map("memberships")
+}
+
+/// A pending invite to join an organization. Becomes a Membership only
+/// once the invited person accepts — see ARCHITECTURE.md "Team
+/// Management". The raw token is emailed; only its hash is stored.
+model OrganizationInvitation {
+  id             String       @id @default(cuid())
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  email          String
+  role           MembershipRole
+
+  invitedById    String
+  invitedBy      User         @relation(fields: [invitedById], references: [id], onDelete: Cascade)
+
+  tokenHash      String       @unique
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  revokedAt      DateTime?
+
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId])
+  @@index([email])
+  @@map("organization_invitations")
 }
 
 /// Generic audit trail. One row per sensitive mutation, written by a

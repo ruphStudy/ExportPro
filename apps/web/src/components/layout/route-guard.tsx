@@ -1,30 +1,48 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
-import { useSessionStore } from "@/lib/session-store";
+import { isUnauthenticated, useSession } from "@/lib/session";
 import { PageSkeleton } from "@/components/ui/skeleton";
 
 /**
- * Extension point for real route protection. Sprint 1 seeds a
- * foundation session (see lib/session-store.ts) so `session` is never
- * null yet — this component exists so every (app) route is already
- * wrapped by the check Sprint 2 will make meaningful: redirect to
- * sign-in when `session` is null instead of rendering protected UI.
+ * Real route protection (Sprint 1's seeded session is gone — see
+ * ARCHITECTURE.md "Sprint 1 → Sprint 2"). Renders nothing but a
+ * skeleton until the session bootstrap call resolves, so protected
+ * content never flashes before auth is known:
+ *
+ *  - loading    → skeleton, no children
+ *  - no session → redirect to /login?returnTo=<here>, no children
+ *  - no active organization → redirect to /create-organization
+ *  - authenticated + has an organization → render children
  */
 export function RouteGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const session = useSessionStore((s) => s.session);
-  const isLoading = useSessionStore((s) => s.isLoading);
+  const pathname = usePathname();
+  const { data: session, isLoading, isError, error } = useSession();
 
   React.useEffect(() => {
-    if (!isLoading && !session) {
-      router.replace("/unauthorized");
-    }
-  }, [isLoading, session, router]);
+    if (isLoading) return;
 
-  if (isLoading) return <PageSkeleton />;
-  if (!session) return null;
+    if (isError || !session) {
+      if (isUnauthenticated(error) || !session) {
+        router.replace(`/login?returnTo=${encodeURIComponent(pathname)}`);
+      }
+      return;
+    }
+
+    if (!session.activeOrganizationId) {
+      router.replace("/create-organization");
+    }
+  }, [isLoading, isError, error, session, pathname, router]);
+
+  if (isLoading || isError || !session || !session.activeOrganizationId) {
+    return (
+      <div className="flex-1 p-6">
+        <PageSkeleton />
+      </div>
+    );
+  }
 
   return <>{children}</>;
 }

@@ -1,6 +1,8 @@
 import type { ApiResponse } from "@exportpro/types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
+// Same-origin, relative path — next.config.ts rewrites this to the API so the
+// HttpOnly session cookie never has to cross an origin. See ARCHITECTURE.md.
+const API_BASE_URL = "/api/v1";
 
 export class ApiRequestError extends Error {
   constructor(
@@ -27,23 +29,28 @@ interface RequestOptions extends Omit<RequestInit, "body"> {
  * caller should need to know the response is JSON, or shaped as
  * `{ success, data | error }`.
  *
- * Auth-token attachment is a single extension point (`getAuthHeader`)
- * so Sprint 2 can wire real tokens in one place instead of touching
- * every call site.
+ * `credentials: "include"` is required even though the API is same-origin
+ * via the rewrite proxy in production builds behind certain reverse
+ * proxies — harmless no-op for a true same-origin request otherwise.
  */
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { body, headers, signal, ...rest } = options;
+  const isFormData = body instanceof FormData;
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...rest,
     signal,
+    credentials: "include",
     headers: {
-      "Content-Type": "application/json",
-      ...getAuthHeader(),
+      ...(isFormData ? {} : { "Content-Type": "application/json" }),
       ...headers,
     },
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    body: body === undefined ? undefined : isFormData ? body : JSON.stringify(body),
   });
+
+  if (response.status === 204) {
+    return undefined as T;
+  }
 
   const json = (await response.json().catch(() => null)) as ApiResponse<T> | null;
 
@@ -56,11 +63,6 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   }
 
   return json.data;
-}
-
-/** Extension point for Sprint 2's session/token strategy. */
-function getAuthHeader(): Record<string, string> {
-  return {};
 }
 
 export const apiClient = {

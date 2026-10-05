@@ -11,24 +11,41 @@ export const TradeDirection = {
 } as const;
 export type TradeDirection = (typeof TradeDirection)[keyof typeof TradeDirection];
 
+/** Sprint 2 roles. MEMBER (Sprint 1 placeholder) no longer exists — see ARCHITECTURE.md "Roles & Permissions". */
 export const MembershipRole = {
   OWNER: "OWNER",
   ADMIN: "ADMIN",
-  MEMBER: "MEMBER",
+  EXPORT_MANAGER: "EXPORT_MANAGER",
+  SALES: "SALES",
+  DOCUMENTATION: "DOCUMENTATION",
+  LOGISTICS: "LOGISTICS",
+  FINANCE: "FINANCE",
+  VIEWER: "VIEWER",
 } as const;
 export type MembershipRole = (typeof MembershipRole)[keyof typeof MembershipRole];
 
 export const MembershipStatus = {
-  INVITED: "INVITED",
   ACTIVE: "ACTIVE",
   SUSPENDED: "SUSPENDED",
   REMOVED: "REMOVED",
 } as const;
 export type MembershipStatus = (typeof MembershipStatus)[keyof typeof MembershipStatus];
 
+/** How an organization (tenant) is structured as a business entity. */
+export const BusinessType = {
+  MANUFACTURER: "MANUFACTURER",
+  MERCHANT_EXPORTER: "MERCHANT_EXPORTER",
+  TRADER: "TRADER",
+  IMPORTER: "IMPORTER",
+  EXPORTER_IMPORTER: "EXPORTER_IMPORTER",
+} as const;
+export type BusinessType = (typeof BusinessType)[keyof typeof BusinessType];
+
 /**
- * Conceptual trade-entity roles a counterparty or the tenant itself can
- * play. Kept as a type-only taxonomy in Sprint 1 — no table backs this yet.
+ * Conceptual trade-entity roles a counterparty can play (future
+ * buyers/suppliers module). Kept as a type-only taxonomy — no table
+ * backs this yet. Distinct from BusinessType, which classifies the
+ * tenant's own organization.
  */
 export const TradeEntityKind = {
   EXPORTER: "EXPORTER",

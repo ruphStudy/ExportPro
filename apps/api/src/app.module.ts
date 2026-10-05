@@ -1,18 +1,25 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import configuration from './config/configuration';
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 import { AuthGuard } from './common/guards/auth.guard';
 import { PrismaModule } from './prisma/prisma.module';
+import { MailModule } from './mail/mail.module';
+import { StorageModule } from './modules/storage/storage.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { HealthModule } from './modules/health/health.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { OrganizationsModule } from './modules/organizations/organizations.module';
+import { MembersModule } from './modules/members/members.module';
+import { ProfileModule } from './modules/profile/profile.module';
+import { DevModule } from './modules/dev/dev.module';
 
 /**
- * Composition root. Domain modules (users, organizations, ... added from
- * Sprint 2 onward) are registered here, each importing only what it
- * needs from PrismaModule/AuditModule — nothing in this file should
- * contain business logic itself.
+ * Composition root. Domain modules are registered here, each importing
+ * only what it needs from PrismaModule/AuditModule/AuthModule —
+ * nothing in this file should contain business logic itself.
  */
 @Module({
   imports: [
@@ -20,15 +27,24 @@ import { HealthModule } from './modules/health/health.module';
       isGlobal: true,
       load: [configuration],
     }),
+    ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 100 }]),
     PrismaModule,
+    MailModule,
+    StorageModule,
     AuditModule,
     HealthModule,
+    AuthModule,
+    OrganizationsModule,
+    MembersModule,
+    ProfileModule,
+    // Dev-only mailbox for reading OTP/reset emails without a real mail provider.
+    ...(process.env.NODE_ENV === 'production' ? [] : [DevModule]),
   ],
   providers: [
-    {
-      provide: APP_GUARD,
-      useClass: AuthGuard,
-    },
+    // Order matters: rate-limit first (even unauthenticated requests like
+    // login attempts), then authenticate.
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: AuthGuard },
   ],
 })
 export class AppModule implements NestModule {

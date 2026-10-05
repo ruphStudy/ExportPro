@@ -1,23 +1,47 @@
-import type { MembershipRole, MembershipStatus, TradeDirection } from "./enums";
+import type { BusinessType, MembershipRole, MembershipStatus, TradeDirection } from "./enums";
+import type { Permission } from "./permissions";
 
 /**
- * API-contract shapes for the Sprint 1 identity/tenancy foundation.
- * These mirror the Prisma models but are DTOs, not entities: fields are
- * chosen for what a client needs, not for what the database stores.
+ * API-contract shapes for identity/tenancy. These mirror the Prisma
+ * models but are DTOs, not entities: fields are chosen for what a
+ * client needs (never a password/token hash), not for what the
+ * database stores.
  */
 
 export interface UserSummary {
   id: string;
   email: string;
-  fullName: string | null;
+  firstName: string;
+  lastName: string;
+  fullName: string;
+  phone: string | null;
   avatarUrl: string | null;
+  emailVerified: boolean;
+  lastLoginAt: string | null;
+  createdAt: string;
 }
 
 export interface OrganizationSummary {
   id: string;
   name: string;
+  legalName: string | null;
   slug: string;
+  businessType: BusinessType | null;
+  industry: string | null;
+  website: string | null;
+  email: string | null;
+  phone: string | null;
+  logoUrl: string | null;
+  addressLine1: string | null;
+  addressLine2: string | null;
+  city: string | null;
+  state: string | null;
+  postalCode: string | null;
+  country: string | null;
+  timezone: string;
+  defaultCurrency: string;
   tradeDirections: TradeDirection[];
+  createdAt: string;
 }
 
 export interface MembershipSummary {
@@ -27,11 +51,13 @@ export interface MembershipSummary {
   organization: OrganizationSummary;
 }
 
-/** The authenticated session shape the frontend's SessionProvider will consume from Sprint 2 onward. */
+/** The authenticated session shape the frontend's session bootstrap consumes from `GET /auth/me`. */
 export interface SessionContext {
   user: UserSummary;
   activeOrganizationId: string | null;
   memberships: MembershipSummary[];
+  /** Effective permissions for the active organization only — empty if the user has no active organization. */
+  permissions: Permission[];
 }
 
 export interface AuditLogEntry {

@@ -1,19 +1,16 @@
-import type { SessionContext } from "@exportpro/types";
+import type { Permission, SessionContext } from "@exportpro/types";
 
 /**
- * Extension point for Sprint 2's real RBAC. Every call site already
- * passes a permission string and the session, so wiring up real checks
- * later touches this one function instead of every caller.
+ * Real permission check against the authenticated session's effective
+ * permissions (computed server-side by ROLE_PERMISSIONS — see
+ * @exportpro/types/permissions.ts). This replaces Sprint 1's
+ * `hasPermission() => true` placeholder.
  *
- * Sprint 1 has no permission model yet, so this always allows — it
- * exists purely so `navigation.ts` and the sidebar/route-guard can be
- * written against the real shape now.
+ * This is a UX convenience only — hiding a nav item or disabling a
+ * button. The backend's PermissionGuard is the actual authority and
+ * enforces the same ROLE_PERMISSIONS map independently of anything
+ * computed here.
  */
-export function hasPermission(
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- signature fixed now so Sprint 2's real check is a drop-in
-  session: SessionContext | null,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  permission: string,
-): boolean {
-  return true;
+export function hasPermission(session: SessionContext | null | undefined, permission: Permission): boolean {
+  return session?.permissions.includes(permission) ?? false;
 }
