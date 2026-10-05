@@ -1,0 +1,19 @@
+{
+  "name": "exportpro",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI-powered import/export intelligence and automation SaaS platform.",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev --workspace apps/web",
+    "dev:api": "npm run start:dev --workspace apps/api",
+    "build": "npm run build --workspace @exportpro/types && npm run build --workspace apps/api && npm run build --workspace apps/web",
+    "build:web": "npm run build --workspace apps/web",
+    "build:api": "npm run build --workspace apps/api",
+    "lint": "npm run lint --workspace apps/web && npm run lint --workspace apps/api",
+    "typecheck": "npm run typecheck --workspace @exportpro/types && npm run typecheck --workspace apps/web && npm run typecheck --workspace apps/api"
+  }
+}

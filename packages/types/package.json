@@ -1,0 +1,15 @@
+{
+  "name": "@exportpro/types",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared API contracts (DTOs, enums, response envelopes) used by both apps/web and apps/api. Never export Prisma entities from here — keep this a persistence-free contract layer.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5"
+  }
+}

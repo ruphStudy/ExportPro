@@ -1,0 +1,123 @@
+// Prisma schema — Sprint 1 foundation.
+// Only the minimum tenancy/identity/audit models required to unblock
+// Sprint 2 (auth + organization onboarding) are defined here.
+// Business-domain models (products, opportunities, buyers, CRM, etc.)
+// are intentionally NOT created yet — see ARCHITECTURE.md.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Role a user holds within a single organization (tenant).
+/// Deliberately a flat enum for Sprint 1 — swap for a Role/Permission
+/// table set in a later sprint if per-org custom roles are needed.
+enum MembershipRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum MembershipStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+  REMOVED
+}
+
+/// Direction of trade a tenant (or a record within a tenant) operates in.
+/// The product supports both from day one even though EXPORT ships first.
+enum TradeDirection {
+  EXPORT
+  IMPORT
+}
+
+/// A person who can sign in. Identity is global; all tenant-scoped data
+/// hangs off Membership, never directly off User, so one person can
+/// belong to several organizations without data leaking between them.
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  fullName      String?
+  avatarUrl     String?
+  isActive      Boolean  @default(true)
+  lastLoginAt   DateTime?
+
+  memberships   Membership[]
+  auditLogs     AuditLog[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("users")
+}
+
+/// A tenant. Every piece of business data created in later sprints must
+/// carry an organizationId that traces back here — this is the root of
+/// the multi-tenancy strategy (see ARCHITECTURE.md "Tenant Isolation").
+model Organization {
+  id            String   @id @default(cuid())
+  name          String
+  slug          String   @unique
+  tradeDirections TradeDirection[] @default([EXPORT])
+  settings      Json?    @default("{}")
+  isActive      Boolean  @default(true)
+
+  memberships   Membership[]
+  auditLogs     AuditLog[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("organizations")
+}
+
+/// Join model between User and Organization — this is the row every
+/// tenant-aware query should pivot through (see TenantGuard / CurrentOrg).
+model Membership {
+  id             String           @id @default(cuid())
+
+  userId         String
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  organizationId String
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  role           MembershipRole   @default(MEMBER)
+  status         MembershipStatus @default(ACTIVE)
+  invitedEmail   String?
+
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@unique([userId, organizationId])
+  @@index([organizationId])
+  @@map("memberships")
+}
+
+/// Generic audit trail. One row per sensitive mutation, written by a
+/// shared AuditService rather than ad hoc logging inside features —
+/// see ARCHITECTURE.md "Audit Strategy".
+model AuditLog {
+  id             String   @id @default(cuid())
+
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  actorId        String?
+  actor          User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  action         String
+  entityType     String
+  entityId       String
+  metadata       Json?    @default("{}")
+
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId, entityType, entityId])
+  @@map("audit_logs")
+}
