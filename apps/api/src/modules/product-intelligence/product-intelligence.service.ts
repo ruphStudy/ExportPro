@@ -79,7 +79,10 @@ const fmtUsd = (v: number) =>
       ? `$${(v / 1e6).toFixed(1)}M`
       : `$${Math.round(v).toLocaleString('en-US')}`;
 
-function freshnessOf(sourceDate: string, now = new Date()): FreshnessStatus {
+export function freshnessOf(
+  sourceDate: string,
+  now = new Date(),
+): FreshnessStatus {
   const days = (now.getTime() - new Date(sourceDate).getTime()) / 86_400_000;
   if (!Number.isFinite(days)) return 'UNKNOWN';
   if (days <= 120) return 'FRESH';
@@ -865,7 +868,7 @@ export class ProductIntelligenceService {
   }
 }
 
-function isEligible(p: OrganizationProduct): boolean {
+export function isEligible(p: OrganizationProduct): boolean {
   const confirmed =
     p.classificationStatus === 'USER_CONFIRMED' ||
     p.classificationStatus === 'OFFICIALLY_VERIFIED';

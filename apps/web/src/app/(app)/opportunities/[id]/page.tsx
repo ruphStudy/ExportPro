@@ -100,6 +100,12 @@ function OpportunityDetailContent() {
               <Link href={`/products/${savedProduct.data.id}/intelligence`}>View Product Intelligence</Link>
             </Button>
           )}
+          {savedProduct.data && hasPermission(session, "country_intelligence.view") && (
+            // Only for an already-saved product; the analysis page itself handles unsupported product/country pairs.
+            <Button asChild variant="outline">
+              <Link href={`/products/${savedProduct.data.id}/markets/${o.destinationCountryCode}`}>View Deep Market Analysis</Link>
+            </Button>
+          )}
           {canAnalyzeProduct && !savedProduct.data && (
             // Only prefills the analysis form — nothing is classified, saved or changed on the opportunity.
             <Button asChild variant="outline">

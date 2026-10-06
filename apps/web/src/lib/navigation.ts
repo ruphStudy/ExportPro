@@ -7,6 +7,7 @@ import {
   Globe2,
   Inbox,
   LayoutDashboard,
+  Map as MapIcon,
   Package,
   Settings,
   Ship,
@@ -64,6 +65,14 @@ export const NAV_ITEMS: NavItem[] = [
     status: "active",
     permission: "products.view",
     description: "Analyze products and manage HS / ITC-HS classifications.",
+  },
+  {
+    label: "Markets",
+    href: "/markets",
+    icon: MapIcon,
+    status: "active",
+    permission: "country_intelligence.view",
+    description: "Country market intelligence: best markets and products by country.",
   },
   {
     label: "Buyers & Suppliers",

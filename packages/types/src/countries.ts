@@ -83,3 +83,22 @@ export function isValidCountryCode(code: string): boolean {
 export function countryLabel(code: string): string {
   return COUNTRIES.find((c) => c.code === code)?.label ?? code;
 }
+
+export interface CountryMeta {
+  code: string;
+  name: string;
+  region: string;
+  currency: string;
+}
+
+// code|region|ISO 4217 currency — region/currency metadata for every code in COUNTRIES.
+const COUNTRY_META_TABLE = `AE|Middle East|AED;AF|South Asia|AFN;AR|Latin America|ARS;AU|Oceania|AUD;BD|South Asia|BDT;BE|Europe|EUR;BH|Middle East|BHD;BR|Latin America|BRL;CA|North America|CAD;CH|Europe|CHF;CL|Latin America|CLP;CN|East Asia|CNY;CO|Latin America|COP;DE|Europe|EUR;DK|Europe|DKK;EG|Africa|EGP;ES|Europe|EUR;ET|Africa|ETB;FI|Europe|EUR;FR|Europe|EUR;GB|Europe|GBP;GH|Africa|GHS;GR|Europe|EUR;HK|East Asia|HKD;ID|Southeast Asia|IDR;IE|Europe|EUR;IL|Middle East|ILS;IN|South Asia|INR;IQ|Middle East|IQD;IR|Middle East|IRR;IT|Europe|EUR;JO|Middle East|JOD;JP|East Asia|JPY;KE|Africa|KES;KR|East Asia|KRW;KW|Middle East|KWD;LK|South Asia|LKR;MA|Africa|MAD;MM|Southeast Asia|MMK;MX|Latin America|MXN;MY|Southeast Asia|MYR;NG|Africa|NGN;NL|Europe|EUR;NO|Europe|NOK;NP|South Asia|NPR;NZ|Oceania|NZD;OM|Middle East|OMR;PH|Southeast Asia|PHP;PK|South Asia|PKR;PL|Europe|PLN;PT|Europe|EUR;QA|Middle East|QAR;RO|Europe|RON;RU|Europe|RUB;SA|Middle East|SAR;SE|Europe|SEK;SG|Southeast Asia|SGD;TH|Southeast Asia|THB;TR|Europe|TRY;TW|East Asia|TWD;TZ|Africa|TZS;UA|Europe|UAH;UG|Africa|UGX;US|North America|USD;VN|Southeast Asia|VND;ZA|Africa|ZAR`;
+
+export const COUNTRY_META: Record<string, CountryMeta> = Object.fromEntries(
+  COUNTRY_META_TABLE.split(";").map((row) => {
+    const [code, region, currency] = row.split("|");
+    return [code, { code, name: countryLabel(code), region, currency }];
+  }),
+);
+
+export const COUNTRY_REGIONS = [...new Set(Object.values(COUNTRY_META).map((c) => c.region))].sort();

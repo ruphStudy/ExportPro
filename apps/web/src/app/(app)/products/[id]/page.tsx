@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, ArrowRight, BarChart3, Pencil, RotateCw, Search } from "lucide-react";
+import { AlertTriangle, ArrowRight, BarChart3, Map as MapIcon, Pencil, RotateCw, Search } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
@@ -63,6 +63,7 @@ function ProductDetailContent() {
   const canConfirm = hasPermission(session, "products.confirm_classification");
   const canViewOpportunities = hasPermission(session, "opportunities.view");
   const canViewIntelligence = hasPermission(session, "product_intelligence.view");
+  const canViewMarkets = hasPermission(session, "country_intelligence.view");
 
   const detail = useQuery({ queryKey: ["products", "detail", id], queryFn: () => productsApi.getById(id) });
   const intelligence = useQuery({
@@ -242,8 +243,26 @@ function ProductDetailContent() {
               )}
             </Card>
           )}
+          {canViewMarkets && (
+            <Card className="p-4">
+              <SectionTitle className="text-sm">Best Markets</SectionTitle>
+              {intelligence.data?.status === "CLASSIFICATION_REQUIRED" ? (
+                <HelperText className="mt-1">Confirm product classification before viewing market intelligence.</HelperText>
+              ) : (
+                <>
+                  <HelperText className="mt-1">Advisory ranking of destination countries for this product.</HelperText>
+                  <Button asChild variant="outline" className="mt-3 w-full">
+                    <Link href={`/products/${p.id}/markets`}>
+                      <MapIcon className="size-4" aria-hidden="true" />
+                      View Best Markets
+                    </Link>
+                  </Button>
+                </>
+              )}
+            </Card>
+          )}
           <Card className="p-4">
-            <SectionTitle className="text-sm">Continue to Market Analysis</SectionTitle>
+            <SectionTitle className="text-sm">Opportunity discovery</SectionTitle>
             <HelperText className="mt-1">
               {p.marketAnalysis.matchingOpportunityCount > 0
                 ? `${p.marketAnalysis.matchingOpportunityCount} matching opportunit${p.marketAnalysis.matchingOpportunityCount === 1 ? "y" : "ies"} in opportunity discovery${p.marketAnalysis.opportunitySearch ? ` for “${p.marketAnalysis.opportunitySearch}”` : " in this category"}.`
@@ -258,7 +277,7 @@ function ProductDetailContent() {
               </Button>
             )}
             <HelperText className="mt-3">
-              Full country-level market analysis for saved products is coming in a future release.
+              For a country-by-country market ranking, use Best Markets above.
             </HelperText>
           </Card>
         </aside>

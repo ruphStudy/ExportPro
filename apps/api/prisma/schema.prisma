@@ -986,3 +986,23 @@ model ProductIntelligenceSnapshot {
   @@index([code])
   @@map("product_intelligence_snapshots")
 }
+
+// --- Sprint 7: country intelligence --------------------------------------
+
+/// Global, lightweight score history for one product-code × country pair
+/// per dataset version — enough for "previous score / delta / why". Not a
+/// time-series or alerting store. No tenant data.
+model ProductCountryScoreSnapshot {
+  id               String   @id @default(cuid())
+  productCode      String
+  countryCode      String
+  datasetVersion   String
+  opportunityScore Int
+  confidence       Int
+  components       Json
+  capturedAt       DateTime @default(now())
+
+  @@unique([productCode, countryCode, datasetVersion])
+  @@index([productCode, countryCode, capturedAt])
+  @@map("product_country_score_snapshots")
+}

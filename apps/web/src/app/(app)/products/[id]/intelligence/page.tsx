@@ -555,7 +555,9 @@ function MarketsSection({ intel }: { intel: ProductIntelligence }) {
           </tbody>
         </table>
       </div>
-      <HelperText>Country-level opportunity ranking for this product is coming in a future release.</HelperText>
+      <Button asChild variant="outline" className="w-fit">
+        <Link href={`/products/${intel.product.id}/markets`}>Best Markets for This Product</Link>
+      </Button>
     </section>
   );
 }

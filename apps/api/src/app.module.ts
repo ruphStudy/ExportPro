@@ -19,6 +19,7 @@ import { ExportOnboardingModule } from './modules/export-onboarding/export-onboa
 import { OpportunitiesModule } from './modules/opportunities/opportunities.module';
 import { ProductAnalysisModule } from './modules/product-analysis/product-analysis.module';
 import { ProductIntelligenceModule } from './modules/product-intelligence/product-intelligence.module';
+import { CountryIntelligenceModule } from './modules/country-intelligence/country-intelligence.module';
 import { DevModule } from './modules/dev/dev.module';
 
 /**
@@ -47,6 +48,7 @@ import { DevModule } from './modules/dev/dev.module';
     OpportunitiesModule,
     ProductAnalysisModule,
     ProductIntelligenceModule,
+    CountryIntelligenceModule,
     // Dev-only mailbox for reading OTP/reset emails without a real mail provider.
     ...(process.env.NODE_ENV === 'production' ? [] : [DevModule]),
   ],

@@ -14,5 +14,6 @@ import { SampleTradeDataProvider } from './providers/sample-trade-data.provider'
     // Swap for a Sprint 9 official/public trade-data provider; nothing else changes.
     { provide: PRODUCT_TRADE_DATA_PROVIDER, useClass: SampleTradeDataProvider },
   ],
+  exports: [ProductIntelligenceService, PRODUCT_TRADE_DATA_PROVIDER],
 })
 export class ProductIntelligenceModule {}
