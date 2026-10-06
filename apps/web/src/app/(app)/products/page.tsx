@@ -47,6 +47,10 @@ function ProductsContent() {
   const [q, setQ] = React.useState("");
   const [term, setTerm] = React.useState("");
   const [page, setPage] = React.useState(1);
+  const [compareIds, setCompareIds] = React.useState<string[]>([]);
+  const canCompare = hasPermission(session, "comparisons.view");
+  const toggleCompare = (id: string) =>
+    setCompareIds((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : cur.length >= 5 ? cur : [...cur, id]));
 
   React.useEffect(() => {
     const t = setTimeout(() => {
@@ -84,6 +88,24 @@ function ProductsContent() {
   });
 
   const columns: Column<ProductSummary>[] = [
+    ...(canCompare
+      ? [
+          {
+            key: "compare",
+            header: "Compare",
+            render: (p: ProductSummary) => (
+              <input
+                type="checkbox"
+                className="size-4"
+                aria-label={`Select ${p.displayName} for comparison`}
+                checked={compareIds.includes(p.id)}
+                disabled={!compareIds.includes(p.id) && compareIds.length >= 5}
+                onChange={() => toggleCompare(p.id)}
+              />
+            ),
+          },
+        ]
+      : []),
     {
       key: "name",
       header: "Product",
@@ -200,6 +222,19 @@ function ProductsContent() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="flex min-w-0 flex-col gap-3">
+          {canCompare && compareIds.length > 0 && (
+            <div role="status" className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-surface p-3 text-sm">
+              <span>
+                {compareIds.length < 2 ? "Select at least 2 products to compare." : `${compareIds.length} selected${compareIds.length >= 5 ? " (maximum 5)" : ""}.`}
+              </span>
+              {compareIds.length >= 2 && (
+                <Button asChild size="sm">
+                  <Link href={`/compare/products?ids=${compareIds.join(",")}`}>Compare ({compareIds.length})</Link>
+                </Button>
+              )}
+              <Button variant="ghost" size="sm" onClick={() => setCompareIds([])}>Clear</Button>
+            </div>
+          )}
           {!isEmpty && (
             <SearchInput
               aria-label="Search products by name or code"

@@ -53,6 +53,9 @@ function ProductMarketsContent() {
   const [minScore, setMinScore] = React.useState("");
   const [sort, setSort] = React.useState<NonNullable<ProductMarketsQuery["sort"]>>("OPPORTUNITY");
   const [page, setPage] = React.useState(1);
+  const [compare, setCompare] = React.useState<string[]>([]);
+  const toggleCompare = (cc: string) =>
+    setCompare((cur) => (cur.includes(cc) ? cur.filter((c) => c !== cc) : cur.length >= 5 ? cur : [...cur, cc]));
   const query = useQuery({
     queryKey: ["product-markets", id, region, minScore, sort, page],
     queryFn: () => marketsApi.productMarkets(id, { region: region || undefined, minScore: minScore ? Number(minScore) : undefined, sort, page, pageSize: 10 }),
@@ -131,16 +134,48 @@ function ProductMarketsContent() {
       {d.items.length === 0 ? (
         <EmptyState title="No markets match these filters" description="Try a different region or a lower minimum score." />
       ) : (
+        <>
+        <div role="status" className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-surface p-3 text-sm">
+          <span>{compare.length === 0 ? "Select 2–5 markets to compare them." : `${compare.length} selected${compare.length >= 5 ? " (maximum)" : ""}.`}</span>
+          {compare.length >= 2 && (
+            <Button asChild size="sm">
+              <Link href={`/compare/markets?product=${d.product.id}&countries=${compare.join(",")}`}>Compare Markets ({compare.length})</Link>
+            </Button>
+          )}
+          {compare.length > 0 && <Button variant="ghost" size="sm" onClick={() => setCompare([])}>Clear</Button>}
+        </div>
         <ol aria-label="Ranked destination markets" className="flex flex-col gap-3">
-          {d.items.map((r) => <MarketCard key={r.country.code} row={r} productId={d.product.id} />)}
+          {d.items.map((r) => (
+            <MarketCard
+              key={r.country.code}
+              row={r}
+              productId={d.product.id}
+              selected={compare.includes(r.country.code)}
+              selectDisabled={!compare.includes(r.country.code) && compare.length >= 5}
+              onToggle={() => toggleCompare(r.country.code)}
+            />
+          ))}
         </ol>
+        </>
       )}
       {d.meta.totalPages > 1 && <Pagination meta={d.meta} onPageChange={setPage} />}
     </div>
   );
 }
 
-function MarketCard({ row, productId }: { row: ProductMarketRanking; productId: string }) {
+function MarketCard({
+  row,
+  productId,
+  selected,
+  selectDisabled,
+  onToggle,
+}: {
+  row: ProductMarketRanking;
+  productId: string;
+  selected: boolean;
+  selectDisabled: boolean;
+  onToggle: () => void;
+}) {
   const c = row.components;
   const metrics: [string, number | string][] = [
     ["Demand", c.demand],
@@ -184,12 +219,18 @@ function MarketCard({ row, productId }: { row: ProductMarketRanking; productId: 
           {row.reasons.length > 0 && <p className="text-foreground"><span className="font-medium text-success">Why: </span>{row.reasons.join(" · ")}</p>}
           {row.risks.length > 0 && <p className="text-foreground"><span className="font-medium text-warning">Risks: </span>{row.risks.join(" · ")}</p>}
         </div>
-        <Button asChild variant="outline" size="sm" className="w-fit">
-          <Link href={`/products/${productId}/markets/${row.country.code}`}>
-            View Market Analysis
-            <ArrowRight className="size-4" aria-hidden="true" />
-          </Link>
-        </Button>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button asChild variant="outline" size="sm" className="w-fit">
+            <Link href={`/products/${productId}/markets/${row.country.code}`}>
+              View Market Analysis
+              <ArrowRight className="size-4" aria-hidden="true" />
+            </Link>
+          </Button>
+          <label className="flex items-center gap-1.5 text-xs text-foreground">
+            <input type="checkbox" className="size-4" checked={selected} disabled={selectDisabled} onChange={onToggle} />
+            Add {row.country.name} to comparison
+          </label>
+        </div>
       </Card>
     </li>
   );

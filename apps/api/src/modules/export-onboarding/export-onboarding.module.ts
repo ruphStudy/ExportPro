@@ -31,5 +31,6 @@ import { ReadinessService } from './readiness.service';
     OnboardingDocumentsService,
     ReadinessService,
   ],
+  exports: [ReadinessService],
 })
 export class ExportOnboardingModule {}

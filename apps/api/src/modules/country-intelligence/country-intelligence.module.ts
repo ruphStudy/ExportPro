@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { PersonalizationModule } from '../personalization/personalization.module';
 import { ProductAnalysisModule } from '../product-analysis/product-analysis.module';
 import { ProductIntelligenceModule } from '../product-intelligence/product-intelligence.module';
 import { CountryIntelligenceController } from './country-intelligence.controller';
@@ -7,7 +8,11 @@ import { COUNTRY_TRADE_DATA_PROVIDER } from './providers/country-trade-data.prov
 import { SampleCountryDataProvider } from './providers/sample-country-data.provider';
 
 @Module({
-  imports: [ProductAnalysisModule, ProductIntelligenceModule],
+  imports: [
+    ProductAnalysisModule,
+    ProductIntelligenceModule,
+    PersonalizationModule,
+  ],
   controllers: [CountryIntelligenceController],
   providers: [
     CountryIntelligenceService,
@@ -17,5 +22,6 @@ import { SampleCountryDataProvider } from './providers/sample-country-data.provi
       useClass: SampleCountryDataProvider,
     },
   ],
+  exports: [CountryIntelligenceService],
 })
 export class CountryIntelligenceModule {}

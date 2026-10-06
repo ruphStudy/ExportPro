@@ -123,6 +123,9 @@ function Header({ a }: { a: MarketDeepAnalysis }) {
         <ContextBadges context={a.context} />
         {a.match.level === "HS_HEADING" && <Badge variant="warning">Matched at heading level ({formatTariffCode(a.match.matchedCode)})</Badge>}
       </div>
+      <Button asChild variant="outline" size="sm" className="w-fit">
+        <Link href={`/compare/markets?product=${a.product.id}&countries=${a.country.code}`}>Compare this market</Link>
+      </Button>
     </div>
   );
 }

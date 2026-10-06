@@ -40,7 +40,7 @@ import {
 import { INDIAN_STATES } from './indian-states';
 
 /** Global, product-code-level intelligence persisted in the snapshot (no tenant data). */
-type GlobalIntelligence = Omit<
+export type GlobalIntelligence = Omit<
   ProductIntelligence,
   'product' | 'personalFit' | 'status'
 >;
@@ -210,6 +210,31 @@ export class ProductIntelligenceService {
       classificationCode: product.classificationCode,
       hsCode: product.hsCode,
     });
+  }
+
+  /**
+   * Read-only global intelligence for a matched dataset (Sprint 7/8 reuse):
+   * the stored snapshot if present, otherwise the same deterministic
+   * computation in memory — no snapshot write, no audit.
+   */
+  async globalIntelligence(
+    match: TradeDatasetMatch,
+  ): Promise<GlobalIntelligence> {
+    const existing = await this.prisma.productIntelligenceSnapshot.findUnique({
+      where: {
+        datasetKey_datasetVersion: {
+          datasetKey: match.dataset.datasetKey,
+          datasetVersion: match.dataset.datasetVersion,
+        },
+      },
+    });
+    if (existing)
+      return this.withMatch(
+        existing.payload as unknown as GlobalIntelligence,
+        match,
+        existing.generatedAt,
+      );
+    return this.withMatch(await this.compute(match.dataset), match, new Date());
   }
 
   private async loadOrGenerate(

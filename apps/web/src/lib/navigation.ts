@@ -10,6 +10,7 @@ import {
   Map as MapIcon,
   Package,
   Settings,
+  Sparkles,
   Ship,
   ShieldCheck,
   Truck,
@@ -73,6 +74,14 @@ export const NAV_ITEMS: NavItem[] = [
     status: "active",
     permission: "country_intelligence.view",
     description: "Country market intelligence: best markets and products by country.",
+  },
+  {
+    label: "Recommendations",
+    href: "/recommendations",
+    icon: Sparkles,
+    status: "active",
+    permission: "recommendations.view",
+    description: "Personalized product × market recommendations and comparisons.",
   },
   {
     label: "Buyers & Suppliers",
@@ -162,6 +171,11 @@ export const NAV_ITEMS: NavItem[] = [
   },
 ];
 
+/** Routes without their own sidebar item, shown under the closest parent section. */
+const SECTION_ALIASES: Record<string, string> = { "/compare": "/recommendations" };
+
 export function findNavItemByPath(pathname: string): NavItem | undefined {
-  return NAV_ITEMS.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
+  const alias = Object.entries(SECTION_ALIASES).find(([prefix]) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+  const path = alias ? alias[1] : pathname;
+  return NAV_ITEMS.find((item) => path === item.href || path.startsWith(`${item.href}/`));
 }

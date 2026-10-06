@@ -11,3 +11,4 @@ export * from "./opportunities";
 export * from "./products";
 export * from "./product-intelligence";
 export * from "./country-intelligence";
+export * from "./comparisons";

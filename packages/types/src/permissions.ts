@@ -30,6 +30,8 @@ export const PERMISSIONS = [
   "products.confirm_classification",
   "product_intelligence.view",
   "country_intelligence.view",
+  "comparisons.view",
+  "recommendations.view",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -67,6 +69,8 @@ export const ROLE_PERMISSIONS: Record<MembershipRole, readonly Permission[]> = {
     "products.view",
     "product_intelligence.view",
     "country_intelligence.view",
+    "comparisons.view",
+    "recommendations.view",
     "products.analyze",
     "products.create",
     "products.update",
@@ -96,6 +100,8 @@ export const ROLE_PERMISSIONS: Record<MembershipRole, readonly Permission[]> = {
     "products.view",
     "product_intelligence.view",
     "country_intelligence.view",
+    "comparisons.view",
+    "recommendations.view",
     "products.analyze",
     "products.create",
     "products.update",
@@ -117,6 +123,8 @@ export const ROLE_PERMISSIONS: Record<MembershipRole, readonly Permission[]> = {
     "products.view",
     "product_intelligence.view",
     "country_intelligence.view",
+    "comparisons.view",
+    "recommendations.view",
     "products.analyze",
     "products.create",
     "products.update",
@@ -133,6 +141,8 @@ export const ROLE_PERMISSIONS: Record<MembershipRole, readonly Permission[]> = {
     "products.view",
     "product_intelligence.view",
     "country_intelligence.view",
+    "comparisons.view",
+    "recommendations.view",
     "products.analyze",
   ],
   // Classification support: can run analyses, answer clarifications and
@@ -147,11 +157,13 @@ export const ROLE_PERMISSIONS: Record<MembershipRole, readonly Permission[]> = {
     "products.view",
     "product_intelligence.view",
     "country_intelligence.view",
+    "comparisons.view",
+    "recommendations.view",
     "products.analyze",
   ],
-  LOGISTICS: ["organization.view", "team.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view", "products.view", "product_intelligence.view", "country_intelligence.view"],
-  FINANCE: ["organization.view", "team.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view", "products.view", "product_intelligence.view", "country_intelligence.view"],
-  VIEWER: ["organization.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view", "products.view", "product_intelligence.view", "country_intelligence.view"],
+  LOGISTICS: ["organization.view", "team.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view", "products.view", "product_intelligence.view", "country_intelligence.view", "comparisons.view", "recommendations.view"],
+  FINANCE: ["organization.view", "team.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view", "products.view", "product_intelligence.view", "country_intelligence.view", "comparisons.view", "recommendations.view"],
+  VIEWER: ["organization.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view", "products.view", "product_intelligence.view", "country_intelligence.view", "comparisons.view", "recommendations.view"],
 };
 
 export function roleHasPermission(role: MembershipRole, permission: Permission): boolean {

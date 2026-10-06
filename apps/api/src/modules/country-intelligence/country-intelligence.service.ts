@@ -1,5 +1,5 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { ExporterProfile, OrganizationProduct, Prisma } from '@prisma/client';
+import { OrganizationProduct, Prisma } from '@prisma/client';
 import {
   COUNTRY_META,
   COUNTRY_REGIONS,
@@ -20,12 +20,19 @@ import {
   SourceMetadata,
 } from '@exportpro/types';
 import { PrismaService } from '../../prisma/prisma.service';
+import { PersonalizationService } from '../personalization/personalization.service';
+import {
+  computePersonalFit,
+  FitProfile,
+} from '../personalization/personal-fit';
+import { fitAttributes } from '../personalization/fit-attributes';
 import { buildPaginationMeta } from '../../common/utils/pagination.util';
 import { nameSimilarity, ProductsService } from '../products/products.service';
 import {
   freshnessOf,
   isEligible,
   ProductIntelligenceService,
+  GlobalIntelligence,
 } from '../product-intelligence/product-intelligence.service';
 import {
   PRODUCT_TRADE_DATA_PROVIDER,
@@ -59,15 +66,6 @@ const FRESHNESS_SCORE = {
   STALE: 40,
   UNKNOWN: 20,
 } as const;
-const INVESTMENT_ORDER = [
-  'UNDER_1L',
-  'L1_5',
-  'L5_10',
-  'L10_25',
-  'L25_50',
-  'L50_1CR',
-  'ABOVE_1CR',
-];
 const SORT_KEYS: Record<
   NonNullable<ProductMarketsQuery['sort']>,
   (r: ProductMarketRanking) => number
@@ -81,10 +79,7 @@ const SORT_KEYS: Record<
   RISK: (r) => r.components.countryRisk,
 };
 
-interface OrgContext {
-  profile: ExporterProfile | null;
-  targets: Map<string, 'CURRENT' | 'INTERESTED'>;
-}
+type OrgContext = FitProfile;
 
 @Injectable()
 export class CountryIntelligenceService {
@@ -96,6 +91,7 @@ export class CountryIntelligenceService {
     private readonly productData: ProductTradeDataProvider,
     @Inject(COUNTRY_TRADE_DATA_PROVIDER)
     private readonly data: CountryTradeDataProvider,
+    private readonly personalization: PersonalizationService,
   ) {}
 
   // --- Product → Best Countries ------------------------------------------
@@ -136,7 +132,8 @@ export class CountryIntelligenceService {
         ...empty,
       };
 
-    const ctx = await this.orgContext(organizationId);
+    const ctx = await this.personalization.loadProfile(organizationId);
+    const intel = await this.productIntelligence.globalIntelligence(match);
     let rows: ProductMarketRanking[] = markets.flatMap((m) => {
       const country = this.data.countryProfile(m.countryCode);
       if (!country || !COUNTRY_META[m.countryCode]) return [];
@@ -152,9 +149,11 @@ export class CountryIntelligenceService {
           countryRiskLevel: levelFromFavorable(country.riskScore),
           currencyRiskLevel: levelFromFavorable(country.currencyStability),
           marketEntry: s.entry,
+          marketEntryEase: s.entryEase,
+          routeComplexity: country.routeComplexity,
           reasons: s.reasons,
           risks: s.risks,
-          personalFit: this.personalFit(ctx, m.countryCode, s, country),
+          personalFit: this.fit(ctx, match, intel, m.countryCode, s, country),
           context: this.context(ctx, m.countryCode),
         },
       ];
@@ -235,7 +234,7 @@ export class CountryIntelligenceService {
       };
     }
 
-    const ctx = await this.orgContext(organizationId);
+    const ctx = await this.personalization.loadProfile(organizationId);
     const s = this.score(m, country, match);
     const confidence = this.matchConfidence(s.confidence, match);
     const scoreChange = await this.scoreChange(match.dataset.code, cc, s);
@@ -288,7 +287,14 @@ export class CountryIntelligenceService {
       })),
       reasons: s.reasons,
       risks: s.risks,
-      personalFit: this.personalFit(ctx, cc, s, country),
+      personalFit: this.fit(
+        ctx,
+        match,
+        await this.productIntelligence.globalIntelligence(match),
+        cc,
+        s,
+        country,
+      ),
       scoreChange,
       marketSize: {
         available: true,
@@ -412,7 +418,7 @@ export class CountryIntelligenceService {
     organizationId: string,
     q: { q?: string; region?: string; page?: number; pageSize?: number },
   ): Promise<CountryListResponse> {
-    const ctx = await this.orgContext(organizationId);
+    const ctx = await this.personalization.loadProfile(organizationId);
     const term = q.q?.trim().toLowerCase();
     const all = Object.values(COUNTRY_META).filter((c) => c.code !== 'IN');
     const filtered = all.filter(
@@ -468,7 +474,7 @@ export class CountryIntelligenceService {
     const meta = COUNTRY_META[cc];
     if (!meta || cc === 'IN')
       throw new NotFoundException('Unknown country code.');
-    const ctx = await this.orgContext(organizationId);
+    const ctx = await this.personalization.loadProfile(organizationId);
     const profile = this.data.countryProfile(cc);
     const ranked = profile ? this.rankCountryProducts(cc, profile) : [];
     if (!profile || ranked.length === 0) {
@@ -497,6 +503,17 @@ export class CountryIntelligenceService {
         savedByCode.set(m.dataset.code, p.id);
     }
 
+    const intels = new Map(
+      await Promise.all(
+        ranked.map(
+          async (r) =>
+            [
+              r.code,
+              await this.productIntelligence.globalIntelligence(r.match),
+            ] as const,
+        ),
+      ),
+    );
     const items: CountryProductRanking[] = ranked.map((r, i) => ({
       rank: i + 1,
       productCode: r.code,
@@ -507,7 +524,14 @@ export class CountryIntelligenceService {
       components: r.scored.components,
       indiaSharePercent: r.market.indiaSharePercent,
       savedProductId: savedByCode.get(r.code) ?? null,
-      personalFit: this.personalFit(ctx, cc, r.scored, profile),
+      personalFit: this.fit(
+        ctx,
+        r.match,
+        intels.get(r.code) ?? null,
+        cc,
+        r.scored,
+        profile,
+      ),
     }));
     const top = items.slice(0, 3);
     return {
@@ -595,6 +619,7 @@ export class CountryIntelligenceService {
         return [
           {
             code: m.productCode,
+            match: dataset,
             label: dataset.dataset.label,
             categoryCode: dataset.dataset.categoryCode,
             market: m,
@@ -636,20 +661,6 @@ export class CountryIntelligenceService {
     };
   }
 
-  private async orgContext(organizationId: string): Promise<OrgContext> {
-    const [profile, targets] = await Promise.all([
-      this.prisma.exporterProfile.findUnique({ where: { organizationId } }),
-      this.prisma.targetCountry.findMany({
-        where: { organizationId },
-        select: { countryCode: true, relation: true },
-      }),
-    ]);
-    return {
-      profile,
-      targets: new Map(targets.map((t) => [t.countryCode, t.relation])),
-    };
-  }
-
   private context(ctx: OrgContext, cc: string): MarketContext {
     const rel = ctx.targets.get(cc);
     return {
@@ -658,70 +669,70 @@ export class CountryIntelligenceService {
     };
   }
 
-  /** Relevance to this organization only — never feeds back into the market score. */
-  private personalFit(
+  /** Shared Sprint 8 personal fit — relevance only, never feeds back into the market score. */
+  private fit(
     ctx: OrgContext,
+    match: TradeDatasetMatch,
+    intel: GlobalIntelligence | null,
     cc: string,
     s: ScoredMarket,
     country: CountryProfile,
   ): PersonalFit | null {
-    const p = ctx.profile;
-    if (!p && ctx.targets.size === 0) return null;
-    let score = 50;
-    const reasons: string[] = [];
-    const rel = ctx.targets.get(cc);
-    if (rel === 'CURRENT') {
-      score += 25;
-      reasons.push('You already export to this market');
-    } else if (rel === 'INTERESTED') {
-      score += 20;
-      reasons.push('One of your target markets');
+    if (!ctx.hasProfile && ctx.targets.size === 0) return null;
+    const r = computePersonalFit(
+      ctx,
+      fitAttributes(match, intel, {
+        countryCode: cc,
+        scored: s,
+        profile: country,
+      }),
+    );
+    return {
+      score: r.score,
+      reasons: r.reasons.map((x) => x.text),
+      cautions: r.cautions.map((x) => x.text),
+    };
+  }
+
+  /** Every supported product × country market, scored once (Sprint 8 recommendations). */
+  async marketCandidates() {
+    const out: {
+      match: TradeDatasetMatch;
+      market: ProductCountryMarket;
+      country: CountryProfile;
+      scored: ScoredMarket;
+      intel: GlobalIntelligence;
+    }[] = [];
+    const intels = new Map<string, GlobalIntelligence>();
+    for (const cc of this.data.supportedCountries()) {
+      const country = this.data.countryProfile(cc);
+      if (!country || !COUNTRY_META[cc]) continue;
+      for (const market of this.data.marketsForCountry(cc)) {
+        const match = this.productData.find({
+          codeSystem: 'HS',
+          classificationCode: market.productCode,
+          hsCode: market.productCode,
+        });
+        if (!match) continue;
+        if (!intels.has(match.dataset.code))
+          intels.set(
+            match.dataset.code,
+            await this.productIntelligence.globalIntelligence(match),
+          );
+        out.push({
+          match,
+          market,
+          country,
+          scored: this.score(market, country, match),
+          intel: intels.get(match.dataset.code)!,
+        });
+      }
     }
-    if (p?.riskTolerance === 'CONSERVATIVE' && country.riskScore < 50) {
-      score -= 15;
-      reasons.push('Higher country risk than your conservative preference');
-    }
-    if (p?.riskTolerance === 'AGGRESSIVE' && s.components.growth >= 65) {
-      score += 5;
-      reasons.push('Fast-growing market suits your risk appetite');
-    }
-    const novice =
-      p?.exportExperience === 'NONE' ||
-      p?.exportExperience === 'LESS_THAN_1_YEAR';
-    if (novice && s.entry === 'DIFFICULT') {
-      score -= 15;
-      reasons.push('Difficult market entry for a newer exporter');
-    }
-    if (novice && s.entry === 'EASY') {
-      score += 10;
-      reasons.push('Easier market entry suits a newer exporter');
-    }
-    const range = p?.investmentRange
-      ? INVESTMENT_ORDER.indexOf(p.investmentRange)
-      : -1;
-    if (range >= 0 && range <= 1 && country.logisticsBase < 50) {
-      score -= 10;
-      reasons.push(
-        'Long, complex route may strain a smaller investment budget',
-      );
-    }
-    if (
-      p?.preferredLogistics?.includes('AIR') &&
-      country.airSuitability.startsWith('Good')
-    ) {
-      score += 5;
-      reasons.push('Air freight is practical to this market');
-    }
-    if (
-      p?.desiredMarginMin !== null &&
-      p?.desiredMarginMin !== undefined &&
-      p.desiredMarginMin >= 25 &&
-      s.components.competition < 40
-    ) {
-      score -= 5;
-      reasons.push('High competition may pressure your target margin');
-    }
-    return { score: Math.max(0, Math.min(100, score)), reasons };
+    return out;
+  }
+
+  sourceMetadata(): SourceMetadata {
+    return this.sourceMeta();
   }
 
   private async recordSnapshots(

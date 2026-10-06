@@ -38,6 +38,7 @@ export interface PersonalFit {
   /** 0–100 relevance to this organization's profile — separate from the market score. */
   score: number;
   reasons: string[];
+  cautions?: string[];
 }
 
 export interface MarketContext {
@@ -73,6 +74,10 @@ export interface ProductMarketRanking {
   countryRiskLevel: IntelligenceLevel;
   currencyRiskLevel: IntelligenceLevel;
   marketEntry: MarketEntryDifficulty;
+  /** 0–100, higher = easier entry (composite behind `marketEntry`). */
+  marketEntryEase: number;
+  /** Indicative route complexity from India — not a freight rate. */
+  routeComplexity: IntelligenceLevel;
   reasons: string[];
   risks: string[];
   personalFit: PersonalFit | null;

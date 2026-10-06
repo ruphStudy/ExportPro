@@ -555,9 +555,14 @@ function MarketsSection({ intel }: { intel: ProductIntelligence }) {
           </tbody>
         </table>
       </div>
-      <Button asChild variant="outline" className="w-fit">
-        <Link href={`/products/${intel.product.id}/markets`}>Best Markets for This Product</Link>
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        <Button asChild variant="outline" className="w-fit">
+          <Link href={`/products/${intel.product.id}/markets`}>Best Markets for This Product</Link>
+        </Button>
+        <Button asChild variant="outline" className="w-fit">
+          <Link href={`/compare/products?ids=${intel.product.id}`}>Compare with another product</Link>
+        </Button>
+      </div>
     </section>
   );
 }
