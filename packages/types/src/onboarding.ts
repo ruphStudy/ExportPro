@@ -68,6 +68,9 @@ export interface ProductInterestSummary {
   category: string | null;
   interestType: ProductInterestType;
   notes: string | null;
+  /** Sprint 5: saved product this interest was analyzed into, if any. */
+  productId: string | null;
+  analyzedAt: string | null;
   createdAt: string;
 }
 

@@ -81,12 +81,4 @@ export interface CountrySummary {
   region?: string;
 }
 
-/**
- * Minimal product reference used by selectors ahead of the real product
- * module (HS codes, pricing, etc. arrive with that module).
- */
-export interface ProductSummary {
-  id: string;
-  name: string;
-  hsCode?: string;
-}
+// ProductSummary now lives in ./products (Sprint 5 saved organization products).

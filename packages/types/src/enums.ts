@@ -249,3 +249,68 @@ export const OpportunitySort = {
   RECENT: "RECENT",
 } as const;
 export type OpportunitySort = (typeof OpportunitySort)[keyof typeof OpportunitySort];
+
+// --- Sprint 5: product analysis & classification ------------------------
+
+export const ProductInputType = {
+  PRODUCT_NAME: "PRODUCT_NAME",
+  HS_CODE: "HS_CODE",
+  ITC_HS_CODE: "ITC_HS_CODE",
+  DESCRIPTION: "DESCRIPTION",
+} as const;
+export type ProductInputType = (typeof ProductInputType)[keyof typeof ProductInputType];
+
+/** HS = international 2/4/6-digit nomenclature; ITC_HS_INDIA = India's 8-digit national extension. */
+export const CodeSystem = {
+  HS: "HS",
+  ITC_HS_INDIA: "ITC_HS_INDIA",
+} as const;
+export type CodeSystem = (typeof CodeSystem)[keyof typeof CodeSystem];
+
+/**
+ * OFFICIALLY_VERIFIED exists only for future-proofing — no Sprint 5 code
+ * path sets it. USER_CONFIRMED means "use this for platform analysis",
+ * never customs/government verification.
+ */
+export const ProductClassificationStatus = {
+  AI_SUGGESTED: "AI_SUGGESTED",
+  USER_SELECTED: "USER_SELECTED",
+  USER_CONFIRMED: "USER_CONFIRMED",
+  OFFICIALLY_VERIFIED: "OFFICIALLY_VERIFIED",
+} as const;
+export type ProductClassificationStatus = (typeof ProductClassificationStatus)[keyof typeof ProductClassificationStatus];
+
+/** Where a classification candidate (and therefore a saved product's code) came from. */
+export const ClassificationSource = {
+  AI_SUGGESTED: "AI_SUGGESTED",
+  REFERENCE_LOOKUP: "REFERENCE_LOOKUP",
+  USER_SELECTED: "USER_SELECTED",
+} as const;
+export type ClassificationSource = (typeof ClassificationSource)[keyof typeof ClassificationSource];
+
+export const AmbiguityStatus = {
+  CLEAR: "CLEAR",
+  AMBIGUOUS: "AMBIGUOUS",
+  INSUFFICIENT_INFORMATION: "INSUFFICIENT_INFORMATION",
+} as const;
+export type AmbiguityStatus = (typeof AmbiguityStatus)[keyof typeof AmbiguityStatus];
+
+export const ProductAnalysisStatus = {
+  PENDING_REVIEW: "PENDING_REVIEW",
+  CONFIRMED: "CONFIRMED",
+} as const;
+export type ProductAnalysisStatus = (typeof ProductAnalysisStatus)[keyof typeof ProductAnalysisStatus];
+
+/** DEVELOPMENT_DEMO = deterministic rule-based dev provider, never a real AI model. */
+export const AnalysisSourceType = {
+  AI_DERIVED: "AI_DERIVED",
+  DEVELOPMENT_DEMO: "DEVELOPMENT_DEMO",
+  REFERENCE_LOOKUP: "REFERENCE_LOOKUP",
+} as const;
+export type AnalysisSourceType = (typeof AnalysisSourceType)[keyof typeof AnalysisSourceType];
+
+export const TariffReferenceSourceType = {
+  OFFICIAL: "OFFICIAL",
+  DEVELOPMENT_SAMPLE: "DEVELOPMENT_SAMPLE",
+} as const;
+export type TariffReferenceSourceType = (typeof TariffReferenceSourceType)[keyof typeof TariffReferenceSourceType];

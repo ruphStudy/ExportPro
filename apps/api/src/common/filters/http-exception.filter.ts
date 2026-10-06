@@ -15,6 +15,8 @@ const STATUS_TO_CODE: Record<number, ApiErrorCode> = {
   [HttpStatus.FORBIDDEN]: 'FORBIDDEN',
   [HttpStatus.NOT_FOUND]: 'NOT_FOUND',
   [HttpStatus.CONFLICT]: 'CONFLICT',
+  [HttpStatus.TOO_MANY_REQUESTS]: 'RATE_LIMITED',
+  [HttpStatus.SERVICE_UNAVAILABLE]: 'SERVICE_UNAVAILABLE',
 };
 
 /**
@@ -75,6 +77,10 @@ function extractMessage(exception: HttpException): string {
 
 function extractDetails(exception: HttpException): unknown {
   const payload = exception.getResponse();
+  // Structured details (e.g. duplicate candidates on a 409) take precedence.
+  if (typeof payload === 'object' && payload !== null && 'details' in payload) {
+    return (payload as { details: unknown }).details;
+  }
   if (typeof payload === 'object' && payload !== null && 'message' in payload) {
     const message = (payload as { message: unknown }).message;
     return Array.isArray(message) ? message : undefined;

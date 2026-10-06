@@ -61,8 +61,9 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Products",
     href: "/products",
     icon: Package,
-    status: "placeholder",
-    description: "Manage your product catalog and HS classifications.",
+    status: "active",
+    permission: "products.view",
+    description: "Analyze products and manage HS / ITC-HS classifications.",
   },
   {
     label: "Buyers & Suppliers",

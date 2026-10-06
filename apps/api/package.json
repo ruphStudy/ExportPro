@@ -19,9 +19,11 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "seed:opportunities": "ts-node prisma/seed-opportunities.ts"
+    "seed:opportunities": "ts-node prisma/seed-opportunities.ts",
+    "seed:tariff-codes": "ts-node prisma/seed-tariff-codes.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.131.0",
     "@exportpro/types": "*",
     "@nestjs/common": "^10.0.0",
     "@nestjs/config": "^12.0.1",

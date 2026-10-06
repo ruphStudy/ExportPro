@@ -23,6 +23,11 @@ export const PERMISSIONS = [
   "opportunities.view",
   "opportunities.save",
   "opportunities.manage_saved_searches",
+  "products.view",
+  "products.analyze",
+  "products.create",
+  "products.update",
+  "products.confirm_classification",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -57,6 +62,11 @@ export const ROLE_PERMISSIONS: Record<MembershipRole, readonly Permission[]> = {
     "opportunities.view",
     "opportunities.save",
     "opportunities.manage_saved_searches",
+    "products.view",
+    "products.analyze",
+    "products.create",
+    "products.update",
+    "products.confirm_classification",
   ],
   // Same as OWNER except owner-only destructive actions (transfer
   // ownership, delete organization) are enforced by explicit role
@@ -79,6 +89,11 @@ export const ROLE_PERMISSIONS: Record<MembershipRole, readonly Permission[]> = {
     "opportunities.view",
     "opportunities.save",
     "opportunities.manage_saved_searches",
+    "products.view",
+    "products.analyze",
+    "products.create",
+    "products.update",
+    "products.confirm_classification",
   ],
   // Can run the exporter-onboarding wizard and opportunity discovery day
   // to day, but not manage team membership or organization identity.
@@ -93,6 +108,11 @@ export const ROLE_PERMISSIONS: Record<MembershipRole, readonly Permission[]> = {
     "opportunities.view",
     "opportunities.save",
     "opportunities.manage_saved_searches",
+    "products.view",
+    "products.analyze",
+    "products.create",
+    "products.update",
+    "products.confirm_classification",
   ],
   SALES: [
     "organization.view",
@@ -102,11 +122,24 @@ export const ROLE_PERMISSIONS: Record<MembershipRole, readonly Permission[]> = {
     "readiness.view",
     "opportunities.view",
     "opportunities.save",
+    "products.view",
+    "products.analyze",
   ],
-  DOCUMENTATION: ["organization.view", "team.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view"],
-  LOGISTICS: ["organization.view", "team.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view"],
-  FINANCE: ["organization.view", "team.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view"],
-  VIEWER: ["organization.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view"],
+  // Classification support: can run analyses, answer clarifications and
+  // pre-select candidates, but confirming/saving stays with managers.
+  DOCUMENTATION: [
+    "organization.view",
+    "team.view",
+    "profile.view",
+    "onboarding.view",
+    "readiness.view",
+    "opportunities.view",
+    "products.view",
+    "products.analyze",
+  ],
+  LOGISTICS: ["organization.view", "team.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view", "products.view"],
+  FINANCE: ["organization.view", "team.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view", "products.view"],
+  VIEWER: ["organization.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view", "products.view"],
 };
 
 export function roleHasPermission(role: MembershipRole, permission: Permission): boolean {

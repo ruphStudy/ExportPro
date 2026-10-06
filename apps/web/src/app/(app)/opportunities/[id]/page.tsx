@@ -1,7 +1,8 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bookmark, BookmarkCheck, CheckCircle2, Minus, TrendingDown, TrendingUp, XCircle } from "lucide-react";
+import { Bookmark, BookmarkCheck, CheckCircle2, Minus, Sparkles, TrendingDown, TrendingUp, XCircle } from "lucide-react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import * as React from "react";
 import { countryLabel, PRODUCT_CATEGORIES } from "@exportpro/types";
@@ -36,6 +37,7 @@ function OpportunityDetailContent() {
   const params = useParams<{ id: string }>();
   const { data: session } = useSession();
   const canSave = hasPermission(session, "opportunities.save");
+  const canAnalyzeProduct = hasPermission(session, "products.analyze");
   const queryClient = useQueryClient();
 
   const detail = useQuery({ queryKey: ["opportunities", "detail", params.id], queryFn: () => opportunitiesApi.getById(params.id) });
@@ -83,12 +85,25 @@ function OpportunityDetailContent() {
             ))}
           </div>
         </div>
-        {canSave && (
-          <Button onClick={() => (o.isSaved ? remove.mutate() : save.mutate())} loading={save.isPending || remove.isPending}>
-            {o.isSaved ? <BookmarkCheck className="size-4" aria-hidden="true" /> : <Bookmark className="size-4" aria-hidden="true" />}
-            {o.isSaved ? "Saved" : "Save"}
-          </Button>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {canAnalyzeProduct && (
+            // Only prefills the analysis form — nothing is classified, saved or changed on the opportunity.
+            <Button asChild variant="outline">
+              <Link
+                href={`/products/analyze?${new URLSearchParams({ input: o.productName, category: o.productCategoryCode, opportunityId: o.id })}`}
+              >
+                <Sparkles className="size-4" aria-hidden="true" />
+                Analyze Product
+              </Link>
+            </Button>
+          )}
+          {canSave && (
+            <Button onClick={() => (o.isSaved ? remove.mutate() : save.mutate())} loading={save.isPending || remove.isPending}>
+              {o.isSaved ? <BookmarkCheck className="size-4" aria-hidden="true" /> : <Bookmark className="size-4" aria-hidden="true" />}
+              {o.isSaved ? "Saved" : "Save"}
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">

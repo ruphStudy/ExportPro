@@ -19,7 +19,11 @@ export function buildConfiguration(env: EnvConfig) {
       url: env.DATABASE_URL,
     },
     ai: {
+      provider: env.AI_PROVIDER,
       apiKey: env.AI_PROVIDER_API_KEY,
+      model: env.AI_MODEL,
+      timeoutMs: env.AI_TIMEOUT_MS,
+      enabled: env.AI_ENABLED,
     },
     email: {
       apiKey: env.EMAIL_PROVIDER_API_KEY,

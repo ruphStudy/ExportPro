@@ -65,7 +65,11 @@ export interface ConfirmDialogProps {
   cancelLabel?: string;
   destructive?: boolean;
   loading?: boolean;
+  /** Disables the confirm action (e.g. until a required acknowledgement is ticked). */
+  confirmDisabled?: boolean;
   onConfirm: () => void;
+  children?: React.ReactNode;
+  className?: string;
 }
 
 export function ConfirmDialog({
@@ -77,7 +81,10 @@ export function ConfirmDialog({
   cancelLabel = "Cancel",
   destructive,
   loading,
+  confirmDisabled,
   onConfirm,
+  children,
+  className,
 }: ConfirmDialogProps) {
   return (
     <Modal
@@ -85,17 +92,20 @@ export function ConfirmDialog({
       onOpenChange={onOpenChange}
       title={title}
       description={description}
+      className={className}
       footer={
         <>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
             {cancelLabel}
           </Button>
-          <Button variant={destructive ? "destructive" : "primary"} onClick={onConfirm} disabled={loading}>
+          <Button variant={destructive ? "destructive" : "primary"} onClick={onConfirm} disabled={loading || confirmDisabled}>
             {loading && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
             {confirmLabel}
           </Button>
         </>
       }
-    />
+    >
+      {children}
+    </Modal>
   );
 }

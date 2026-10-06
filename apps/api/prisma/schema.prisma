@@ -3,6 +3,7 @@
 // Sprint 3 (exporter onboarding, preferences, registrations,
 // certifications, documents, readiness scoring).
 // Sprint 4 (opportunity discovery, scoring, watchlist, saved searches).
+// Sprint 5 (product analysis, HS/ITC-HS classification, saved products).
 // Business-domain models (buyers, CRM, costing, etc.) are intentionally
 // NOT created yet — see ARCHITECTURE.md.
 
@@ -273,6 +274,7 @@ model Opportunity {
 
   snapshots             OpportunityScoreSnapshot[]
   savedBy               SavedOpportunity[]
+  productAnalyses       ProductAnalysis[]
 
   @@unique([productName, destinationCountryCode])
   @@index([destinationCountryCode])
@@ -371,6 +373,8 @@ model User {
   sentInvitations      OrganizationInvitation[]
   savedOpportunities   SavedOpportunity[]
   createdSavedSearches SavedOpportunitySearch[]
+  productAnalyses      ProductAnalysis[]
+  confirmedProducts    OrganizationProduct[] @relation("ProductConfirmedBy")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -487,6 +491,8 @@ model Organization {
   onboardingDocuments OnboardingDocument[]
   savedOpportunities  SavedOpportunity[]
   savedSearches       SavedOpportunitySearch[]
+  productAnalyses     ProductAnalysis[]
+  products            OrganizationProduct[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -625,6 +631,14 @@ model ProductInterest {
   interestType ProductInterestType @default(INTERESTED)
   notes        String?
 
+  /// Sprint 5: set once this interest has been analyzed and confirmed into
+  /// a saved product. The interest itself is never overwritten or deleted.
+  productId    String?
+  product      OrganizationProduct? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  analyzedAt   DateTime?
+
+  analyses     ProductAnalysis[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -739,4 +753,208 @@ model OnboardingDocument {
   @@index([registrationId])
   @@index([certificationId])
   @@map("onboarding_documents")
+}
+
+// --- Sprint 5: product analysis & classification -----------------------
+
+enum ProductInputType {
+  PRODUCT_NAME
+  HS_CODE
+  ITC_HS_CODE
+  DESCRIPTION
+}
+
+enum CodeSystem {
+  HS
+  ITC_HS_INDIA
+}
+
+/// OFFICIALLY_VERIFIED is future-proofing only — nothing in Sprint 5 sets
+/// it. USER_CONFIRMED = "use for platform analysis", not customs verification.
+enum ProductClassificationStatus {
+  AI_SUGGESTED
+  USER_SELECTED
+  USER_CONFIRMED
+  OFFICIALLY_VERIFIED
+}
+
+enum ClassificationSource {
+  AI_SUGGESTED
+  REFERENCE_LOOKUP
+  USER_SELECTED
+}
+
+enum AmbiguityStatus {
+  CLEAR
+  AMBIGUOUS
+  INSUFFICIENT_INFORMATION
+}
+
+enum ProductAnalysisStatus {
+  PENDING_REVIEW
+  CONFIRMED
+}
+
+enum AnalysisSourceType {
+  AI_DERIVED
+  DEVELOPMENT_DEMO
+  REFERENCE_LOOKUP
+}
+
+enum TariffReferenceSourceType {
+  OFFICIAL
+  DEVELOPMENT_SAMPLE
+}
+
+/// Global HS / ITC-HS reference rows. Sprint 5 ships a small, clearly
+/// labeled DEVELOPMENT_SAMPLE set (prisma/seed-tariff-codes.ts); an
+/// official dataset import later writes the same table with sourceType
+/// OFFICIAL, so product APIs don't change.
+model TariffCode {
+  id          String     @id @default(cuid())
+  codeSystem  CodeSystem
+  code        String
+  /// Digit count: 2 chapter, 4 heading, 6 subheading, 8 ITC-HS tariff line.
+  level       Int
+  description String
+  parentCode  String?
+  sourceType  TariffReferenceSourceType @default(DEVELOPMENT_SAMPLE)
+  sourceName  String
+  isActive    Boolean    @default(true)
+
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@unique([codeSystem, code])
+  @@index([parentCode])
+  @@map("tariff_codes")
+}
+
+/// One analysis session: user input + AI/reference interpretation +
+/// candidate codes. Temporary/advisory state — distinct from the confirmed
+/// OrganizationProduct it may eventually produce.
+model ProductAnalysis {
+  id                     String   @id @default(cuid())
+
+  organizationId         String
+  organization           Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdByUserId        String
+  createdBy              User     @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
+
+  inputType              ProductInputType
+  rawInput               String
+  /// Hash of normalized input + hints, used to reuse a recent identical analysis instead of re-calling the provider.
+  inputKey               String
+  categoryHint           String?
+  details                Json     @default("{}")
+  /// [{ questionId, question, answer }]
+  clarificationAnswers   Json     @default("[]")
+
+  normalizedProductName  String
+  productSummary         String
+  suggestedCategoryCode  String
+  /// { material, form, intendedUse, composition }
+  identification         Json     @default("{}")
+  identificationConfidence Int?
+
+  ambiguityStatus        AmbiguityStatus
+  ambiguityReason        String?
+  /// [{ id, question, options, allowFreeText }]
+  clarifyingQuestions    Json     @default("[]")
+
+  status                 ProductAnalysisStatus @default(PENDING_REVIEW)
+  revision               Int      @default(1)
+
+  sourceType             AnalysisSourceType
+  provider               String
+  model                  String?
+  promptVersion          String
+  generatedAt            DateTime @default(now())
+
+  productInterestId      String?
+  productInterest        ProductInterest? @relation(fields: [productInterestId], references: [id], onDelete: SetNull)
+  opportunityId          String?
+  opportunity            Opportunity? @relation(fields: [opportunityId], references: [id], onDelete: SetNull)
+  /// The saved product this analysis belongs to (re-analysis) or was confirmed into.
+  productId              String?
+  product                OrganizationProduct? @relation("ProductAnalyses", fields: [productId], references: [id], onDelete: SetNull)
+
+  candidates             ProductClassificationCandidate[]
+  confirmedProducts      OrganizationProduct[] @relation("ProductConfirmedAnalysis")
+
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, inputKey])
+  @@map("product_analyses")
+}
+
+model ProductClassificationCandidate {
+  id                      String   @id @default(cuid())
+
+  analysisId              String
+  analysis                ProductAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  codeSystem              CodeSystem
+  code                    String
+  description             String
+  /// null for user-entered / manually selected codes — never a fabricated AI confidence.
+  confidence              Int?
+  rank                    Int
+  reasoningSummary        String?
+  source                  ClassificationSource
+  inReferenceData         Boolean  @default(false)
+  referenceDescription    String?
+  selectedByUser          Boolean  @default(false)
+  confirmedForPlatformUse Boolean  @default(false)
+
+  createdAt               DateTime @default(now())
+
+  @@index([analysisId])
+  @@map("product_classification_candidates")
+}
+
+/// Reusable, organization-scoped product with a user-confirmed (platform
+/// use only) classification. Later modules (product/country intelligence,
+/// buyers, costing, compliance) reference this, not ProductAnalysis.
+model OrganizationProduct {
+  id                         String   @id @default(cuid())
+
+  organizationId             String
+  organization               Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  displayName                String
+  /// Lowercased/trimmed displayName for duplicate detection.
+  normalizedName             String
+  description                String?
+  categoryCode               String?
+
+  classificationCode         String
+  codeSystem                 CodeSystem
+  hsCode                     String
+  itcHsCode                  String?
+  classificationDescription  String
+  classificationStatus       ProductClassificationStatus
+  classificationSource       ClassificationSource
+  classificationConfidence   Int?
+  lowConfidenceAcknowledged  Boolean  @default(false)
+
+  confirmedByUserId          String?
+  confirmedBy                User?    @relation("ProductConfirmedBy", fields: [confirmedByUserId], references: [id], onDelete: SetNull)
+  confirmedAt                DateTime?
+
+  analysisId                 String?
+  analysis                   ProductAnalysis? @relation("ProductConfirmedAnalysis", fields: [analysisId], references: [id], onDelete: SetNull)
+
+  analyses                   ProductAnalysis[] @relation("ProductAnalyses")
+  productInterests           ProductInterest[]
+
+  createdByUserId            String
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+
+  @@index([organizationId, normalizedName])
+  @@index([organizationId, classificationCode])
+  @@map("organization_products")
 }

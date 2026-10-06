@@ -30,6 +30,8 @@ export class ProductInterestsService {
       category: row.category,
       interestType: row.interestType as ProductInterestSummary['interestType'],
       notes: row.notes,
+      productId: row.productId,
+      analyzedAt: row.analyzedAt?.toISOString() ?? null,
       createdAt: row.createdAt.toISOString(),
     };
   }

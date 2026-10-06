@@ -2,12 +2,16 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Sparkles, Trash2 } from "lucide-react";
+import Link from "next/link";
 import * as React from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import type { ExporterProfileSummary } from "@exportpro/types";
 import { onboardingApi, productInterestsApi } from "@/lib/api/onboarding";
+import { hasPermission } from "@/lib/permissions";
+import { analyzeInterestHref } from "@/lib/product-labels";
+import { useSession } from "@/lib/session";
 import { referenceApi } from "@/lib/api/reference";
 import { toFriendlyErrorMessage } from "@/lib/api-client";
 import { toast } from "@/lib/toast";
@@ -40,6 +44,8 @@ export function Step2Products({
   canEdit: boolean;
 }) {
   const queryClient = useQueryClient();
+  const { data: session } = useSession();
+  const canAnalyzeProduct = hasPermission(session, "products.analyze");
   const categories = useQuery({ queryKey: ["reference", "product-categories"], queryFn: referenceApi.productCategories });
   const interests = useQuery({ queryKey: ["onboarding", "products"], queryFn: productInterestsApi.list });
   const [selectedCategories, setSelectedCategories] = React.useState<string[]>(profile.productCategories);
@@ -164,11 +170,27 @@ export function Step2Products({
                     {item.interestType === "CURRENT" ? "Currently sell" : "Interested"}
                   </Badge>
                 </div>
-                {canEdit && (
-                  <Button variant="ghost" size="icon" aria-label={`Remove ${item.name}`} onClick={() => setRemoveTarget(item.id)}>
-                    <Trash2 className="size-4 text-danger" aria-hidden="true" />
-                  </Button>
-                )}
+                <div className="flex shrink-0 items-center gap-1">
+                  {item.productId ? (
+                    <Button asChild variant="ghost" size="sm">
+                      <Link href={`/products/${item.productId}`}>View product</Link>
+                    </Button>
+                  ) : (
+                    canAnalyzeProduct && (
+                      <Button asChild variant="outline" size="sm">
+                        <Link href={analyzeInterestHref(item)} aria-label={`Analyze ${item.name}`}>
+                          <Sparkles className="size-3.5" aria-hidden="true" />
+                          Analyze
+                        </Link>
+                      </Button>
+                    )
+                  )}
+                  {canEdit && (
+                    <Button variant="ghost" size="icon" aria-label={`Remove ${item.name}`} onClick={() => setRemoveTarget(item.id)}>
+                      <Trash2 className="size-4 text-danger" aria-hidden="true" />
+                    </Button>
+                  )}
+                </div>
               </li>
             ))}
           </ul>

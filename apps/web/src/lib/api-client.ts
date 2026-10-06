@@ -81,6 +81,9 @@ export function toFriendlyErrorMessage(error: unknown): string {
     if (error.code === "FORBIDDEN") return "You don't have permission to do that.";
     if (error.code === "NOT_FOUND") return "We couldn't find what you were looking for.";
     if (error.code === "VALIDATION_ERROR") return error.message;
+    if (error.code === "CONFLICT") return error.message;
+    if (error.code === "SERVICE_UNAVAILABLE") return error.message;
+    if (error.code === "RATE_LIMITED") return "Too many requests. Please wait a moment and try again.";
     return "Something went wrong on our end. Please try again.";
   }
   return "Something went wrong. Please try again.";
