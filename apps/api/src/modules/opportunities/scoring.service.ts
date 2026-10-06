@@ -44,6 +44,7 @@ const FRESHNESS_BASE_CONFIDENCE: Record<FreshnessStatus, number> = {
   FRESH: 85,
   RECENT: 70,
   STALE: 50,
+  VERY_STALE: 35,
   UNKNOWN: 40,
 };
 

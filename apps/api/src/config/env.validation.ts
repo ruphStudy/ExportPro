@@ -42,6 +42,37 @@ const envSchema = z.object({
     .default('true')
     .transform((v) => v === 'true'),
 
+  // Sprint 9 trade-data platform (UN Comtrade public preview needs no key).
+  COMTRADE_BASE_URL: z.preprocess(
+    emptyToUndefined,
+    z.string().default('https://comtradeapi.un.org/public/v1/preview'),
+  ),
+  COMTRADE_REQUEST_GAP_MS: z.coerce.number().int().min(1000).default(3500),
+  COMTRADE_HS_CODES: z.preprocess(
+    emptyToUndefined,
+    z.string().default('090931,610910,140490,392410,850440'),
+  ),
+  COMTRADE_EXPORT_YEARS: z.preprocess(
+    emptyToUndefined,
+    z.string().default('2019-2024'),
+  ),
+  COMTRADE_IMPORT_YEARS: z.preprocess(
+    emptyToUndefined,
+    z.string().default('2021-2023'),
+  ),
+  COMTRADE_IMPORT_REPORTERS: z.preprocess(
+    emptyToUndefined,
+    z.string().default('AE,SA,US,DE,GB,CN,BD,NG'),
+  ),
+  COMTRADE_HS_REFERENCE_URL: z.preprocess(
+    emptyToUndefined,
+    z
+      .string()
+      .default('https://comtradeapi.un.org/files/v1/app/reference/HS.json'),
+  ),
+  /** Comma-separated emails allowed to administer GLOBAL trade-data sources (in addition to the role permission). Required in production. */
+  TRADE_DATA_ADMIN_EMAILS: z.string().optional(),
+
   // Email provider (future sprint)
   EMAIL_PROVIDER_API_KEY: z.string().optional(),
   EMAIL_FROM_ADDRESS: z.string().optional(),

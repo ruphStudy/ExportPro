@@ -2,6 +2,7 @@ import type { PaginationMeta } from "./api";
 import type { CountryMeta } from "./countries";
 import type { CAGRMetric, IntelligenceLevel, IntelligenceMatchLevel, SourceMetadata, TradeTrendPoint } from "./product-intelligence";
 import type { ProductSummary } from "./products";
+import type { SectionProvenance } from "./trade-data";
 
 /**
  * Sprint 7 Country Intelligence contracts. Scores are 0–100, higher =
@@ -78,6 +79,8 @@ export interface ProductMarketRanking {
   marketEntryEase: number;
   /** Indicative route complexity from India — not a freight rate. */
   routeComplexity: IntelligenceLevel;
+  /** True when real import statistics (Sprint 9) are layered into this market. */
+  realTradeData: boolean;
   reasons: string[];
   risks: string[];
   personalFit: PersonalFit | null;
@@ -115,6 +118,7 @@ export interface CountryProductRanking {
   confidence: number;
   components: MarketScoreComponents;
   indiaSharePercent: number;
+  realTradeData: boolean;
   /** The org's saved product mapping to this code, if any (navigation only). */
   savedProductId: string | null;
   personalFit: PersonalFit | null;
@@ -238,6 +242,8 @@ export interface MarketDeepAnalysis {
   /** Sprint 4 discovery score for the same product/country, if present — a lighter, different-scope score. */
   discovery: { opportunityId: string; overallScore: number } | null;
   regulatoryNotice: string;
+  /** Per-section provenance (marketSize, importTrend, indiaPosition, competition, pricing, tariff, barriers, guidance, logistics, risk, score). */
+  provenance: SectionProvenance;
 }
 
 export interface MarketAnalysisUnavailable {

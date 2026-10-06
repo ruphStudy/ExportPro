@@ -1,5 +1,6 @@
 import { AlertTriangle, Flag, Scale, Ship } from "lucide-react";
-import type { MarketContext, PersonalFit, SourceMetadata } from "@exportpro/types";
+import type { MarketContext, PersonalFit, SectionProvenance, SourceMetadata } from "@exportpro/types";
+import { SectionProvenanceList } from "@/components/provenance/provenance";
 import { FRESHNESS_LABELS, SOURCE_TYPE_LABELS } from "@/lib/opportunity-labels";
 import { cn } from "@/lib/utils";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
@@ -51,19 +52,35 @@ export function PersonalFitBadge({ fit }: { fit: PersonalFit | null }) {
 }
 
 /** Mandatory sample label + source metadata, shown in full (not only in tooltips). */
-export function MarketSourcePanel({ source, confidence, className }: { source: SourceMetadata; confidence?: number | null; className?: string }) {
+export function MarketSourcePanel({
+  source,
+  confidence,
+  className,
+  provenance,
+  provenanceLabels,
+}: {
+  source: SourceMetadata;
+  confidence?: number | null;
+  className?: string;
+  provenance?: SectionProvenance;
+  provenanceLabels?: Record<string, string>;
+}) {
   const fresh = FRESHNESS_LABELS[source.freshness];
+  const anyReal = Object.values(provenance ?? {}).some((p) => p.provenanceType === "SOURCE_NORMALIZED" || p.provenanceType === "SOURCE_RAW");
   return (
     <section aria-label="Data source" className={cn("flex flex-col gap-3 rounded-lg border border-border bg-surface p-4", className)}>
       {source.isSample && (
         <p role="note" className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/5 p-3 text-sm font-medium text-foreground">
           <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden="true" />
-          Sample market intelligence — not official trade or regulatory data.
+          {anyReal
+            ? "Some sections use sample market intelligence — those sections are not official trade or regulatory data."
+            : "Sample market intelligence — not official trade or regulatory data."}
         </p>
       )}
+      {provenance && provenanceLabels && <SectionProvenanceList provenance={provenance} labels={provenanceLabels} />}
       <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3 lg:grid-cols-6">
         <Meta label="Source type" value={SOURCE_TYPE_LABELS[source.sourceType]} />
-        <Meta label="Source" value={source.sourceName} className="col-span-2" />
+        <Meta label={anyReal ? "Sample-section source" : "Source"} value={source.sourceName} className="col-span-2" />
         <Meta label="Period" value={`${source.coverageFrom}–${source.coverageTo}`} />
         <Meta label="Source date" value={new Date(source.sourceDate).toLocaleDateString()} />
         <Meta label="Last updated" value={new Date(source.lastUpdatedAt).toLocaleDateString()} />

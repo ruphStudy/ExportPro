@@ -17,6 +17,7 @@ import {
   ProductMarketsQuery,
   ProductMarketsResponse,
   ScoreChange,
+  SectionProvenance,
   SourceMetadata,
 } from '@exportpro/types';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -26,6 +27,7 @@ import {
   FitProfile,
 } from '../personalization/personal-fit';
 import { fitAttributes } from '../personalization/fit-attributes';
+import { demoProvenance, derivedProvenance } from '../trade-data/provenance';
 import { buildPaginationMeta } from '../../common/utils/pagination.util';
 import { nameSimilarity, ProductsService } from '../products/products.service';
 import {
@@ -64,6 +66,7 @@ const FRESHNESS_SCORE = {
   FRESH: 100,
   RECENT: 75,
   STALE: 40,
+  VERY_STALE: 25,
   UNKNOWN: 20,
 } as const;
 const SORT_KEYS: Record<
@@ -151,6 +154,7 @@ export class CountryIntelligenceService {
           marketEntry: s.entry,
           marketEntryEase: s.entryEase,
           routeComplexity: country.routeComplexity,
+          realTradeData: Boolean(m.realTrade),
           reasons: s.reasons,
           risks: s.risks,
           personalFit: this.fit(ctx, match, intel, m.countryCode, s, country),
@@ -409,6 +413,7 @@ export class CountryIntelligenceService {
           : null,
       discovery,
       regulatoryNotice: REGULATORY_NOTICE,
+      provenance: this.marketProvenance(m),
     };
   }
 
@@ -523,6 +528,7 @@ export class CountryIntelligenceService {
       confidence: r.scored.confidence,
       components: r.scored.components,
       indiaSharePercent: r.market.indiaSharePercent,
+      realTradeData: Boolean(r.market.realTrade),
       savedProductId: savedByCode.get(r.code) ?? null,
       personalFit: this.fit(
         ctx,
@@ -600,8 +606,10 @@ export class CountryIntelligenceService {
       m,
       country,
       productLogistics,
-      this.data.source.quality,
-      freshness,
+      m.sourceQuality ?? this.data.source.quality,
+      m.realTrade
+        ? FRESHNESS_SCORE[m.realTrade.provenance.freshness]
+        : freshness,
     );
   }
 
@@ -667,6 +675,52 @@ export class CountryIntelligenceService {
       isTargetMarket: rel !== undefined,
       isCurrentExportMarket: rel === 'CURRENT',
     };
+  }
+
+  /** Section-level provenance: real import statistics where layered in, sample everywhere else. */
+  private marketProvenance(m: ProductCountryMarket): SectionProvenance {
+    const sample = this.data.source;
+    const demo = (methodology: string) =>
+      demoProvenance(
+        'EXPORTPRO_SAMPLE_MARKET',
+        sample.sourceName,
+        sample.sourceDate,
+        freshnessOf(sample.sourceDate),
+        methodology,
+        sample.datasetVersion.split('+')[0],
+      );
+    const real = m.realTrade?.provenance ?? null;
+    const sections: SectionProvenance = {
+      marketSize: real ?? demo('Sample import values.'),
+      importTrend: real ?? demo('Sample annual imports.'),
+      indiaPosition: real ?? demo('Sample India share and rank.'),
+      competition: real ?? demo('Sample competing-supplier shares.'),
+      pricing:
+        real && m.realTrade!.pricingReal
+          ? {
+              ...real,
+              provenanceType: 'SYSTEM_DERIVED',
+              derived: true,
+              methodology:
+                'Unit value = reported import value ÷ quantity (kg).',
+            }
+          : (real ?? demo('Sample unit values.')),
+      tariff: demo(
+        'Illustrative sample tariffs — no tariff source imported yet.',
+      ),
+      barriers: demo('Sample barrier signals — informational only.'),
+      guidance: demo(
+        'Sample packaging/labeling/certification guidance — informational only.',
+      ),
+      logistics: demo('Sample logistics suitability.'),
+      risk: demo('Sample country and currency risk signals.'),
+    };
+    sections.score = derivedProvenance(
+      Object.values(sections),
+      'Weighted market opportunity score from the sections above (calc market-score-v1).',
+      'market-score-v1',
+    );
+    return sections;
   }
 
   /** Shared Sprint 8 personal fit — relevance only, never feeds back into the market score. */

@@ -14,6 +14,7 @@ import { FRESHNESS_LABELS, SOURCE_TYPE_LABELS } from "@/lib/opportunity-labels";
 import { useSession } from "@/lib/session";
 import { toast } from "@/lib/toast";
 import { OpportunityRadar } from "@/components/opportunities/opportunity-radar";
+import { ProvenanceBadge } from "@/components/provenance/provenance";
 import { RequirePermission } from "@/components/layout/require-permission";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -210,7 +211,19 @@ function OpportunityDetailContent() {
       </div>
 
       <Card className="p-4">
-        <SectionTitle>Source &amp; freshness</SectionTitle>
+        <SectionTitle>
+          Source &amp; freshness{" "}
+          <ProvenanceBadge
+            className="ml-1 align-middle"
+            p={{
+              sourceId: null, sourceCode: "EXPORTPRO_DEMO_OPPORTUNITIES", sourceName: o.source.sourceName,
+              sourceType: o.source.sourceType === "DEMO" ? "DEMO" : "PUBLIC", authority: "ExportPro", official: o.source.sourceType === "OFFICIAL",
+              sourceQuality: o.source.sourceType === "DEMO" ? "DEMO" : "C", sourceDate: o.source.sourceDate, lastIngestedAt: o.source.lastUpdatedAt,
+              freshness: o.source.freshness, confidence: o.confidenceScore, provenanceType: o.source.sourceType === "DEMO" ? "DEMO" : "SOURCE_NORMALIZED",
+              datasetVersion: null, derived: false, methodology: null,
+            }}
+          />
+        </SectionTitle>
         <dl className="mt-3 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
           <div>
             <dt className="text-xs text-muted-foreground">Source</dt>

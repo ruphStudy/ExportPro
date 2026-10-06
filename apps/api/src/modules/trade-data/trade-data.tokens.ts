@@ -1,0 +1,1 @@
+export const TRADE_DATA_ADAPTERS = Symbol('TRADE_DATA_ADAPTERS');

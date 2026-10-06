@@ -25,6 +25,16 @@ export function buildConfiguration(env: EnvConfig) {
       timeoutMs: env.AI_TIMEOUT_MS,
       enabled: env.AI_ENABLED,
     },
+    tradeDataPlatform: {
+      comtradeBaseUrl: env.COMTRADE_BASE_URL,
+      comtradeRequestGapMs: env.COMTRADE_REQUEST_GAP_MS,
+      comtradeHsCodes: env.COMTRADE_HS_CODES,
+      comtradeExportYears: env.COMTRADE_EXPORT_YEARS,
+      comtradeImportYears: env.COMTRADE_IMPORT_YEARS,
+      comtradeImportReporters: env.COMTRADE_IMPORT_REPORTERS,
+      hsReferenceUrl: env.COMTRADE_HS_REFERENCE_URL,
+      adminEmails: env.TRADE_DATA_ADMIN_EMAILS,
+    },
     email: {
       apiKey: env.EMAIL_PROVIDER_API_KEY,
       fromAddress: env.EMAIL_FROM_ADDRESS,

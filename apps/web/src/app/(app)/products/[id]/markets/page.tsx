@@ -194,6 +194,7 @@ function MarketCard({
             <h2 className="text-lg font-semibold text-foreground">{row.country.name}</h2>
             <div className="mt-1 flex flex-wrap gap-1.5">
               <ContextBadges context={row.context} />
+              {row.realTradeData ? <Badge variant="success">Real import statistics</Badge> : <Badge variant="warning">Sample market data</Badge>}
               <Badge variant={riskVariant(row.marketEntry)}>{titleCase(row.marketEntry)} entry</Badge>
               <Badge variant={riskVariant(row.countryRiskLevel)}>{titleCase(row.countryRiskLevel)} country risk</Badge>
               <Badge variant={riskVariant(row.currencyRiskLevel)}>{titleCase(row.currencyRiskLevel)} currency risk</Badge>

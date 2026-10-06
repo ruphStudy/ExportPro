@@ -300,6 +300,9 @@ export class ComparisonService {
         source: {
           sourceName: intel.source.sourceName,
           isSample: intel.source.isSample,
+          realTradeData:
+            intel.provenance?.exportTrend?.provenanceType !== 'DEMO' &&
+            Boolean(intel.provenance),
           freshness: intel.source.freshness,
           sourceDate: intel.source.sourceDate,
         },
@@ -462,6 +465,7 @@ export class ComparisonService {
         source: {
           sourceName: source.sourceName,
           isSample: source.isSample,
+          realTradeData: r.realTradeData,
           freshness: source.freshness,
           sourceDate: source.sourceDate,
         },

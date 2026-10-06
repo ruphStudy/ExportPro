@@ -5,14 +5,22 @@ import { ProductIntelligenceController } from './product-intelligence.controller
 import { ProductIntelligenceService } from './product-intelligence.service';
 import { PRODUCT_TRADE_DATA_PROVIDER } from './providers/product-trade-data.provider';
 import { SampleTradeDataProvider } from './providers/sample-trade-data.provider';
+import { RealDataProductProvider } from './providers/real-data-product.provider';
+import { TradeDataModule } from '../trade-data/trade-data.module';
+import { TradeDataOverlayService } from '../trade-data/overlay/trade-data-overlay.service';
 
 @Module({
-  imports: [AuditModule, ProductAnalysisModule],
+  imports: [AuditModule, ProductAnalysisModule, TradeDataModule],
   controllers: [ProductIntelligenceController],
   providers: [
     ProductIntelligenceService,
-    // Swap for a Sprint 9 official/public trade-data provider; nothing else changes.
-    { provide: PRODUCT_TRADE_DATA_PROVIDER, useClass: SampleTradeDataProvider },
+    // Sprint 9: real normalized trade facts over the sample fallback (per-section provenance).
+    {
+      provide: PRODUCT_TRADE_DATA_PROVIDER,
+      inject: [TradeDataOverlayService],
+      useFactory: (overlay: TradeDataOverlayService) =>
+        new RealDataProductProvider(new SampleTradeDataProvider(), overlay),
+    },
   ],
   exports: [ProductIntelligenceService, PRODUCT_TRADE_DATA_PROVIDER],
 })

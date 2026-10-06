@@ -23,6 +23,7 @@ import {
 } from "@/components/markets/market-bits";
 import { ShareList, TrendChart } from "@/components/product-intelligence/trend-chart";
 import { CodeLabel } from "@/components/products/classification-bits";
+import { ProvenanceBadge } from "@/components/provenance/provenance";
 import { Badge } from "@/components/ui/badge";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Button } from "@/components/ui/button";
@@ -89,7 +90,24 @@ function MarketAnalysisContent() {
     <div className="flex min-w-0 flex-col gap-6">
       <Breadcrumbs items={crumbs} />
       <Header a={d} />
-      <MarketSourcePanel source={d.source} confidence={d.confidence} />
+      <MarketSourcePanel
+        source={d.source}
+        confidence={d.confidence}
+        provenance={d.provenance}
+        provenanceLabels={{
+          marketSize: "Market size",
+          importTrend: "Import trend",
+          indiaPosition: "India position",
+          competition: "Competing suppliers",
+          pricing: "Pricing benchmark",
+          tariff: "Tariff",
+          barriers: "Trade barriers",
+          guidance: "Packaging, labeling & certifications",
+          logistics: "Logistics",
+          risk: "Country & currency risk",
+          score: "Market opportunity score",
+        }}
+      />
       <Summary a={d} />
       <DemandSection a={d} />
       <IndiaAndCompetition a={d} />
@@ -134,7 +152,7 @@ function Summary({ a }: { a: MarketDeepAnalysis }) {
   return (
     <section aria-labelledby="summary-h" className="grid grid-cols-1 gap-4 lg:grid-cols-[20rem_minmax(0,1fr)]">
       <Card className="flex flex-col gap-3 p-4">
-        <SectionTitle id="summary-h" className="text-base">Market Opportunity</SectionTitle>
+        <SectionTitle id="summary-h" className="text-base">Market Opportunity {a.provenance?.score && <ProvenanceBadge p={a.provenance.score} className="ml-2 align-middle" />}</SectionTitle>
         <div className="flex flex-wrap items-end gap-4">
           <div><p className="text-4xl font-semibold">{a.opportunityScore}<span className="text-base font-normal text-muted-foreground">/100</span></p><Caption>Opportunity score</Caption></div>
           <div><p className="text-2xl font-semibold">{a.confidence}<span className="text-sm font-normal text-muted-foreground">/100</span></p><Caption>Data confidence</Caption></div>
@@ -214,7 +232,7 @@ function DemandSection({ a }: { a: MarketDeepAnalysis }) {
   const demand = a.components.find((c) => c.key === "demand")!;
   return (
     <section aria-labelledby="demand-h" className="flex flex-col gap-4">
-      <SectionTitle id="demand-h">Demand &amp; Imports</SectionTitle>
+      <SectionTitle id="demand-h">Demand &amp; Imports {a.provenance?.marketSize && <ProvenanceBadge p={a.provenance.marketSize} className="ml-2 align-middle" />}</SectionTitle>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat label={`Market size (${a.marketSize.period})`} value={a.marketSize.available ? money(a.marketSize.importValue!) : "Unavailable"} sub={`${a.country.name} total imports`} />
         <Stat label="Import quantity" value={a.marketSize.importQuantity !== null ? formatQuantity(a.marketSize.importQuantity, a.marketSize.quantityUnit) : "Unavailable"} sub={a.marketSize.importQuantity === null ? "No comparable quantity data" : undefined} />
@@ -252,7 +270,7 @@ function IndiaAndCompetition({ a }: { a: MarketDeepAnalysis }) {
   return (
     <section aria-labelledby="comp-h" className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       <Card className="p-4">
-        <SectionTitle id="india-h" className="text-base">India Position</SectionTitle>
+        <SectionTitle id="india-h" className="text-base">India Position {a.provenance?.indiaPosition && <ProvenanceBadge p={a.provenance.indiaPosition} className="ml-2 align-middle" />}</SectionTitle>
         <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
           <Meta label="India's share of imports" value={`${ip.sharePercent}%`} />
           <Meta label="India's supplier rank" value={ip.rank ? `#${ip.rank}` : "—"} />
@@ -262,7 +280,7 @@ function IndiaAndCompetition({ a }: { a: MarketDeepAnalysis }) {
       </Card>
       <Card className="p-4">
         <div className="flex flex-wrap items-center gap-2">
-          <SectionTitle id="comp-h" className="text-base">Competition</SectionTitle>
+          <SectionTitle id="comp-h" className="text-base">Competition {a.provenance?.competition && <ProvenanceBadge p={a.provenance.competition} className="ml-2 align-middle" />}</SectionTitle>
           <Badge variant={riskVariant(c.level)}>{titleCase(c.level)} competition</Badge>
           <ScorePill score={c.score} label="Attractiveness" />
         </div>
@@ -287,7 +305,7 @@ function TariffSection({ a }: { a: MarketDeepAnalysis }) {
   const t = a.tariff;
   return (
     <section aria-labelledby="tariff-h" className="flex flex-col gap-4">
-      <SectionTitle id="tariff-h">Tariffs &amp; Trade Barriers</SectionTitle>
+      <SectionTitle id="tariff-h">Tariffs &amp; Trade Barriers {a.provenance?.tariff && <ProvenanceBadge p={a.provenance.tariff} className="ml-2 align-middle" />}</SectionTitle>
       <RegulatoryNotice text={a.regulatoryNotice} isSample={a.source.isSample} />
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card className="p-4">
@@ -332,7 +350,7 @@ function GuidanceSection({ a }: { a: MarketDeepAnalysis }) {
   const p = a.pricing;
   return (
     <section aria-labelledby="guide-h" className="flex flex-col gap-4">
-      <SectionTitle id="guide-h">Commercial Guidance</SectionTitle>
+      <SectionTitle id="guide-h">Commercial Guidance {a.provenance?.guidance && <ProvenanceBadge p={a.provenance.guidance} className="ml-2 align-middle" />}</SectionTitle>
       <HelperText>Sample guidance — informational only. &quot;Common practice&quot; describes typical trade behaviour; &quot;possible requirement&quot; must be verified for your exact product and buyer.</HelperText>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Card className="p-4">
@@ -390,7 +408,7 @@ function LogisticsAndRisk({ a }: { a: MarketDeepAnalysis }) {
   return (
     <section aria-labelledby="risk-h" className="grid grid-cols-1 gap-4 lg:grid-cols-3">
       <Card className="p-4">
-        <div className="flex flex-wrap items-center gap-2"><SectionTitle id="log-h" className="text-base">Logistics</SectionTitle><ScorePill score={l.score} /></div>
+        <div className="flex flex-wrap items-center gap-2"><SectionTitle id="log-h" className="text-base">Logistics {a.provenance?.logistics && <ProvenanceBadge p={a.provenance.logistics} className="ml-2 align-middle" />}</SectionTitle><ScorePill score={l.score} /></div>
         <dl className="mt-3 flex flex-col gap-2 text-sm">
           <Meta label="Likely destination ports" value={l.destinationPorts.join(", ")} />
           <Meta label="Sea transit (indicative)" value={l.seaTransit} />
@@ -401,7 +419,7 @@ function LogisticsAndRisk({ a }: { a: MarketDeepAnalysis }) {
         <HelperText className="mt-2">No freight quotation — indicative suitability only.</HelperText>
       </Card>
       <Card className="p-4">
-        <SectionTitle id="risk-h" className="text-base">Country &amp; Currency Risk</SectionTitle>
+        <SectionTitle id="risk-h" className="text-base">Country &amp; Currency Risk {a.provenance?.risk && <ProvenanceBadge p={a.provenance.risk} className="ml-2 align-middle" />}</SectionTitle>
         <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
           <div><dt className="text-xs text-muted-foreground">Country risk</dt><dd><Badge variant={riskVariant(r.countryRiskLevel)}>{titleCase(r.countryRiskLevel)} risk</Badge> <span className="text-xs">{r.countryRiskScore}/100</span></dd></div>
           <div><dt className="text-xs text-muted-foreground">Currency ({r.currency})</dt><dd><Badge variant={riskVariant(r.currencyRiskLevel)}>{titleCase(r.currencyRiskLevel)} risk</Badge> <span className="text-xs">stability {r.currencyStabilityScore}/100</span></dd></div>

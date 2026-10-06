@@ -5,6 +5,7 @@ export const FRESHNESS_LABELS: Record<FreshnessStatus, { label: string; variant:
   FRESH: { label: "Fresh", variant: "success" },
   RECENT: { label: "Recent", variant: "info" },
   STALE: { label: "Stale", variant: "warning" },
+  VERY_STALE: { label: "Very stale", variant: "danger" },
   UNKNOWN: { label: "Unknown freshness", variant: "neutral" },
 };
 

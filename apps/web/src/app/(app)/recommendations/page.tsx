@@ -172,6 +172,7 @@ function RecommendationCard({ rec }: { rec: PersonalizedRecommendation }) {
             <h2 className="break-words text-base font-semibold">{rec.productLabel} → {rec.country.name}</h2>
             <div className="mt-1 flex flex-wrap gap-1.5">
               {rec.isTargetMarket && <Badge variant="info">Your Target Market</Badge>}
+              {rec.realTradeData ? <Badge variant="success">Real import data</Badge> : <Badge variant="warning">Sample data</Badge>}
               {rec.withinBudget && <Badge variant="success">Within your budget</Badge>}
               <Badge variant={riskVariant(rec.marketEntry)}>{titleCase(rec.marketEntry)} entry</Badge>
               <Badge variant={riskVariant(rec.countryRiskLevel)}>{titleCase(rec.countryRiskLevel)} country risk</Badge>

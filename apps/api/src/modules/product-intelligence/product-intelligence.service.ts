@@ -3,6 +3,7 @@ import { OrganizationProduct, Prisma } from '@prisma/client';
 import {
   CodeSystem,
   ComplianceDifficulty,
+  DataProvenance,
   CompetitionLevel,
   FreshnessStatus,
   IntelligenceLevel,
@@ -10,6 +11,7 @@ import {
   ProductIntelligenceResponse,
   ProductIntelligenceSummaryItem,
   RiskSignal,
+  SectionProvenance,
   SourceMetadata,
   TradeTrendPoint,
   TrendPeriodOption,
@@ -38,6 +40,8 @@ import {
   TradeDatasetMatch,
 } from './providers/product-trade-data.provider';
 import { INDIAN_STATES } from './indian-states';
+import { QUALITY_SCORE } from '../trade-data/reliability';
+import { demoProvenance, derivedProvenance } from '../trade-data/provenance';
 
 /** Global, product-code-level intelligence persisted in the snapshot (no tenant data). */
 export type GlobalIntelligence = Omit<
@@ -392,13 +396,19 @@ export class ProductIntelligenceService {
     }
 
     // --- Source & confidence
-    const freshness = freshnessOf(d.source.sourceDate);
-    const freshnessScore = { FRESH: 100, RECENT: 75, STALE: 40, UNKNOWN: 20 }[
-      freshness
-    ];
+    const real = d.realTrade?.provenance ?? null;
+    const seasonMonthly = d.seasonalityMonthly ?? monthly;
+    const freshness = real ? real.freshness : freshnessOf(d.source.sourceDate);
+    const freshnessScore = {
+      FRESH: 100,
+      RECENT: 75,
+      STALE: 40,
+      VERY_STALE: 25,
+      UNKNOWN: 20,
+    }[freshness];
     const completenessChecks = [
       quantityAvailable,
-      monthly.length >= 12,
+      seasonMonthly.length >= 12,
       d.districts.length > 0,
       d.ports.length > 0,
       d.destinations.length >= 5,
@@ -408,8 +418,13 @@ export class ProductIntelligenceService {
       (completenessChecks.filter(Boolean).length / completenessChecks.length) *
       100;
     const granularity =
-      (monthly.length >= 12 ? 50 : 0) + (d.districts.length > 0 ? 50 : 0);
-    const quality = d.source.quality;
+      (seasonMonthly.length >= 12 ? 50 : 0) + (d.districts.length > 0 ? 50 : 0);
+    // Mixed sources: real trend/destinations (60%) blended with the sample sections (40%).
+    const quality = real
+      ? Math.round(
+          0.6 * QUALITY_SCORE[real.sourceQuality] + 0.4 * d.source.quality,
+        )
+      : d.source.quality;
     // A sample/low-quality source can never be "highly confident", however complete it is.
     const confidence = Math.round(
       Math.min(
@@ -421,21 +436,35 @@ export class ProductIntelligenceService {
       ),
     );
 
-    const source: SourceMetadata = {
-      sourceType: d.source.sourceType,
-      sourceName: d.source.sourceName,
-      sourceUrl: d.source.sourceUrl,
-      sourceDate: d.source.sourceDate,
-      lastUpdatedAt: d.source.lastUpdatedAt,
-      freshness,
-      datasetVersion: d.datasetVersion,
-      coverageFrom: yearly[0].period,
-      coverageTo: latest.period,
-      isSample: d.source.sourceType === 'DEMO',
-    };
+    // Page-level metadata describes the export-trend source; per-section provenance is in `provenance`.
+    const source: SourceMetadata = real
+      ? {
+          sourceType: real.official ? 'OFFICIAL' : 'PUBLIC_DATA',
+          sourceName: real.sourceName,
+          sourceUrl: null,
+          sourceDate: `${latest.period}-12-31`,
+          lastUpdatedAt: real.lastIngestedAt ?? new Date().toISOString(),
+          freshness,
+          datasetVersion: d.datasetVersion,
+          coverageFrom: yearly[0].period,
+          coverageTo: latest.period,
+          isSample: false,
+        }
+      : {
+          sourceType: d.source.sourceType,
+          sourceName: d.source.sourceName,
+          sourceUrl: d.source.sourceUrl,
+          sourceDate: d.source.sourceDate,
+          lastUpdatedAt: d.source.lastUpdatedAt,
+          freshness,
+          datasetVersion: d.datasetVersion,
+          coverageFrom: yearly[0].period,
+          coverageTo: latest.period,
+          isSample: d.source.sourceType === 'DEMO',
+        };
 
     // --- Seasonality
-    const season = seasonalityOf(monthly);
+    const season = seasonalityOf(seasonMonthly);
     const seasonalityConfidence = season.available
       ? Math.max(0, confidence - (season.monthsOfData < 24 ? 15 : 0))
       : 0;
@@ -828,7 +857,54 @@ export class ProductIntelligenceService {
         indicativeMarginNote:
           'Indicative dataset estimate — not actual profitability. Detailed costing and margin calculation come in a later module.',
       },
+      provenance: this.sectionProvenance(
+        d,
+        real,
+        freshnessOf(d.source.sourceDate),
+      ),
       generatedAt: new Date().toISOString(),
+    };
+  }
+
+  /** Each section names its own source so mixed real/demo pages never look uniformly "official". */
+  private sectionProvenance(
+    d: ProductTradeDataset,
+    real: DataProvenance | null,
+    sampleFreshness: FreshnessStatus,
+  ): SectionProvenance {
+    const demo = (methodology: string) =>
+      demoProvenance(
+        'EXPORTPRO_SAMPLE_TRADE',
+        d.source.sourceName,
+        d.source.sourceDate,
+        sampleFreshness,
+        methodology,
+        d.datasetVersion.split('+')[0],
+      );
+    const exportTrend = real ?? demo('Sample annual export values.');
+    const destinations = real ?? demo('Sample destination shares.');
+    const seasonality = demo(
+      d.seasonalityMonthly
+        ? 'Sample monthly profile (the real source is annual-only, so it cannot support seasonality).'
+        : 'Sample monthly export profile.',
+    );
+    const ecosystem = demo(
+      'Sample state, district and port shares — no real sub-national source imported yet.',
+    );
+    const productSignals = demo(
+      'Sample competition, compliance, logistics, margin and capital signals.',
+    );
+    return {
+      exportTrend,
+      destinations,
+      seasonality,
+      ecosystem,
+      productSignals,
+      opportunityScore: derivedProvenance(
+        [exportTrend, destinations, seasonality, ecosystem, productSignals],
+        'Weighted product opportunity score from the sections above (calc product-opportunity-v1).',
+        'product-opportunity-v1',
+      ),
     };
   }
 

@@ -105,6 +105,8 @@ export interface ComparisonSummary {
 export interface ComparisonSourceInfo {
   sourceName: string;
   isSample: boolean;
+  /** True when real trade statistics back the trade sections (other sections may still be sample). */
+  realTradeData: boolean;
   freshness: FreshnessStatus;
   sourceDate: string;
 }
@@ -203,6 +205,8 @@ export interface PersonalizedRecommendation {
   fixFirst: string[];
   nextAction: RecommendationNextAction;
   savedProductId: string | null;
+  /** True when real import statistics back this market (tariffs/risk may still be sample). */
+  realTradeData: boolean;
   /** Matching Sprint 4 opportunity for watchlist save, if one exists. */
   opportunity: { id: string; isSaved: boolean } | null;
   groups: RecommendationGroupKey[];

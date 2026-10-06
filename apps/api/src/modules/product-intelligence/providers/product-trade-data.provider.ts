@@ -1,5 +1,6 @@
 import {
   CodeSystem,
+  DataProvenance,
   IntelligenceLevel,
   OpportunitySourceType,
 } from '@exportpro/types';
@@ -32,6 +33,13 @@ export interface ProductTradeDataset {
   yearly: TradePeriodValue[];
   /** Absent when the source has no monthly resolution. */
   monthly: TradePeriodValue[];
+  /**
+   * Sprint 9: set when real normalized trade facts replaced the export
+   * trend + destinations. Other sections stay on the sample dataset.
+   */
+  realTrade?: { provenance: DataProvenance };
+  /** Sample monthly profile kept only for seasonality when the real trend is annual-only. */
+  seasonalityMonthly?: TradePeriodValue[];
   states: { stateCode: string; sharePercent: number }[];
   /** Absent when the source has no district resolution. */
   districts: { district: string; stateCode: string; sharePercent: number }[];

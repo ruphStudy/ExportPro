@@ -3,6 +3,7 @@ import {
   Calculator,
   ClipboardCheck,
   Contact,
+  Database,
   FileText,
   Globe2,
   Inbox,
@@ -146,6 +147,14 @@ export const NAV_ITEMS: NavItem[] = [
     status: "active",
     permission: "team.view",
     description: "Manage organization members, roles, and invitations.",
+  },
+  {
+    label: "Data Sources",
+    href: "/settings/data-sources",
+    icon: Database,
+    status: "active",
+    permission: "trade_data.view",
+    description: "Official trade data sources, ingestion runs, and the trade data explorer.",
   },
   {
     label: "Organization Settings",

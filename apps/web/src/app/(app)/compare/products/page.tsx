@@ -141,6 +141,7 @@ function ProductComparisonResult({ data }: { data: Awaited<ReturnType<typeof com
       <>
         {formatTariffCode(it.product.classificationCode)}
         {it.source && ` · ${it.source.freshness.toLowerCase()} · ${it.confidence}/100 confidence`}
+        {it.source && (it.source.realTradeData ? " · real trade data + sample signals" : " · sample data")}
       </>
     ),
     metrics: it.metrics,

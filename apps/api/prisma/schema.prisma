@@ -196,6 +196,7 @@ enum FreshnessStatus {
   FRESH
   RECENT
   STALE
+  VERY_STALE
   UNKNOWN
 }
 
@@ -1005,4 +1006,269 @@ model ProductCountryScoreSnapshot {
   @@unique([productCode, countryCode, datasetVersion])
   @@index([productCode, countryCode, capturedAt])
   @@map("product_country_score_snapshots")
+}
+
+// --- Sprint 9: government & trade data platform ------------------------
+
+enum TradeDataSourceType {
+  GOVERNMENT
+  INTERGOVERNMENTAL
+  PUBLIC
+  COMMERCIAL
+  INTERNAL
+  DEMO
+}
+
+enum DataAccessMethod {
+  API
+  CSV
+  XLSX
+  JSON
+  ZIP
+  MANUAL_IMPORT
+}
+
+enum SourceQualityTier {
+  A
+  B
+  C
+  D
+  DEMO
+}
+
+enum UpdateFrequency {
+  DAILY
+  MONTHLY
+  QUARTERLY
+  ANNUAL
+  AD_HOC
+  STATIC
+}
+
+enum IngestionRunStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  PARTIAL
+  FAILED
+  CANCELLED
+}
+
+enum IngestionMode {
+  API
+  MANUAL_IMPORT
+  REFERENCE
+}
+
+enum PeriodType {
+  YEAR
+  QUARTER
+  MONTH
+}
+
+enum PartnerEntityType {
+  COUNTRY
+  WORLD
+  AGGREGATE
+  OTHER
+}
+
+enum MappingStatus {
+  EXACT
+  HIGH_CONFIDENCE
+  APPROXIMATE
+  UNRESOLVED
+}
+
+enum TradeDataIssueSeverity {
+  REJECTED
+  UNRESOLVED
+  WARNING
+}
+
+/// Global source registry (no secrets — credentials live in env config only).
+/// Static attributes are synced from code (source-registry.ts); `enabled`
+/// and run-derived fields are operational state.
+model TradeDataSource {
+  id                    String   @id @default(cuid())
+  code                  String   @unique
+  name                  String
+  authority             String
+  sourceType            TradeDataSourceType
+  accessMethod          DataAccessMethod
+  baseUrl               String?
+  termsUrl              String?
+  description           String
+  countryCode           String?
+  dataDomains           String[]
+  updateFrequency       UpdateFrequency
+  expectedLagDays       Int
+  qualityTier           SourceQualityTier
+  official              Boolean
+  enabled               Boolean  @default(true)
+  notes                 String?
+
+  lastSuccessfulRunAt   DateTime?
+  latestSourcePeriod    String?
+  /// End date of the latest period covered, used for freshness.
+  latestPeriodEnd       DateTime?
+  nextExpectedRefreshAt DateTime?
+
+  runs                  TradeDataIngestionRun[]
+  rawRecords            TradeDataRawRecord[]
+  facts                 TradeFact[]
+  issues                TradeDataIssueRecord[]
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@map("trade_data_sources")
+}
+
+model TradeDataIngestionRun {
+  id                 String   @id @default(cuid())
+  sourceId           String
+  source             TradeDataSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  status             IngestionRunStatus @default(PENDING)
+  mode               IngestionMode
+  datasetKeys        String[]
+  startedAt          DateTime?
+  finishedAt         DateTime?
+  recordsFetched     Int      @default(0)
+  recordsAccepted    Int      @default(0)
+  recordsRejected    Int      @default(0)
+  recordsInserted    Int      @default(0)
+  recordsUpdated     Int      @default(0)
+  duplicatesSkipped  Int      @default(0)
+  unresolvedMappings Int      @default(0)
+  qualityScore       Int?
+  checkpoint         Json?
+  sourceVersion      String?
+  transformVersion   String
+  fileName           String?
+  fileChecksum       String?
+  /// Opaque storage key (never a filesystem path).
+  storageKey         String?
+  errorSummary       String?
+  initiatedByUserId  String?
+  organizationId     String?
+
+  rawRecords         TradeDataRawRecord[]
+  issues             TradeDataIssueRecord[]
+  facts              TradeFact[]
+
+  createdAt          DateTime @default(now())
+
+  @@index([sourceId, createdAt])
+  @@index([sourceId, fileChecksum])
+  @@map("trade_data_ingestion_runs")
+}
+
+/// Raw lineage at fetched-unit level (one API response page or one file chunk) — kept for traceability and reprocessing.
+model TradeDataRawRecord {
+  id              String   @id @default(cuid())
+  sourceId        String
+  source          TradeDataSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  ingestionRunId  String
+  run             TradeDataIngestionRun @relation(fields: [ingestionRunId], references: [id], onDelete: Cascade)
+  datasetKey      String
+  sourceRecordKey String?
+  payload         Json
+  sourcePeriod    String?
+  sourceUpdatedAt DateTime?
+  checksum        String
+  importedAt      DateTime @default(now())
+
+  facts           TradeFact[]
+
+  @@index([sourceId, datasetKey, checksum])
+  @@map("trade_data_raw_records")
+}
+
+/// Canonical, normalized trade fact. Original source values are preserved
+/// alongside normalized ones. `factKey` is a deterministic identity per
+/// source so re-ingestion upserts instead of duplicating.
+model TradeFact {
+  id                  String   @id @default(cuid())
+  factKey             String   @unique
+  contentHash         String
+  revision            Int      @default(1)
+  sourceId            String
+  source              TradeDataSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  ingestionRunId      String
+  run                 TradeDataIngestionRun @relation(fields: [ingestionRunId], references: [id])
+  rawRecordId         String?
+  rawRecord           TradeDataRawRecord? @relation(fields: [rawRecordId], references: [id], onDelete: SetNull)
+  sourceRecordKey     String?
+  datasetKey          String
+
+  tradeDirection      TradeDirection
+  codeSystem          CodeSystem
+  hsCode              String
+  hsLevel             Int
+  sourceHsCode        String
+  reporterCountryCode String
+  partnerCountryCode  String?
+  partnerEntityType   PartnerEntityType
+  sourcePartner       String?
+  partnerLabel        String
+
+  periodType          PeriodType
+  year                Int
+  month               Int?
+  periodStart         DateTime
+  periodEnd           DateTime
+
+  /// Original reported value + currency (never converted silently).
+  tradeValue          Decimal? @db.Decimal(20, 2)
+  currency            String
+  valueBasis          String?
+  normalizedValueUsd  Decimal? @db.Decimal(20, 2)
+  fxRate              Decimal? @db.Decimal(18, 8)
+  fxRateDate          DateTime?
+  fxSource            String?
+
+  quantity            Decimal? @db.Decimal(24, 4)
+  quantityUnit        String?
+  normalizedQuantity  Decimal? @db.Decimal(24, 4)
+  normalizedUnit      String?
+  unitMappingStatus   MappingStatus
+  netWeightKg         Decimal? @db.Decimal(24, 4)
+
+  portCode            String?
+  stateCode           String?
+  districtKey         String?
+  districtLabel       String?
+  districtMappingStatus MappingStatus?
+
+  isEstimated         Boolean?
+  sourceUpdatedAt     DateTime?
+  transformVersion    String
+  ingestedAt          DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([hsCode, tradeDirection, reporterCountryCode, year])
+  @@index([reporterCountryCode, partnerCountryCode, hsCode, year])
+  @@index([sourceId])
+  @@map("trade_facts")
+}
+
+/// Rejections, unresolved mappings and warnings — traceable per run.
+model TradeDataIssueRecord {
+  id          String   @id @default(cuid())
+  runId       String
+  run         TradeDataIngestionRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  sourceId    String
+  source      TradeDataSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  kind        String
+  severity    TradeDataIssueSeverity
+  field       String?
+  sourceValue String?
+  message     String
+  rowRef      String?
+  createdAt   DateTime @default(now())
+
+  @@index([runId])
+  @@index([sourceId, kind])
+  @@map("trade_data_issues")
 }

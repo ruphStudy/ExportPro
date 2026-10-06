@@ -142,6 +142,7 @@ function ProductRow({ p, countryCode, canAnalyze }: { p: CountryProductRanking; 
         <div className="flex max-w-[16rem] flex-col whitespace-normal">
           <span className="font-medium">{p.productLabel}</span>
           <Caption>{categoryLabel(p.categoryCode)} · HS {p.productCode}</Caption>
+          <Caption>{p.realTradeData ? "Real import statistics + sample signals" : "Sample market data"}</Caption>
         </div>
       </td>
       <td className="px-3 py-2"><ScorePill score={p.opportunityScore} /></td>

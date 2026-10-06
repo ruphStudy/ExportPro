@@ -133,7 +133,7 @@ function MarketResult({ data, productId }: { data: Awaited<ReturnType<typeof com
   const columns = data.items.map((it) => ({
     id: it.id,
     title: it.country.name,
-    subtitle: it.source ? `${it.source.freshness.toLowerCase()} · ${it.confidence}/100 confidence${it.tariffAvailable ? "" : " · tariff missing"}` : undefined,
+    subtitle: it.source ? `${it.source.freshness.toLowerCase()} · ${it.confidence}/100 confidence${it.tariffAvailable ? "" : " · tariff missing"}${it.source.realTradeData ? " · real import data" : " · sample data"}` : undefined,
     metrics: it.metrics,
     unavailableMessage: it.status === "AVAILABLE" ? null : `No market data for ${data.product.displayName} in ${it.country.name}.`,
   }));

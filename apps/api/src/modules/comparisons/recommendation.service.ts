@@ -194,6 +194,7 @@ export class RecommendationService {
           fixFirst,
           nextAction,
           savedProductId,
+          realTradeData: Boolean(market.realTrade),
           opportunity: opp
             ? { id: opp.id, isSaved: savedIds.has(opp.id) }
             : null,

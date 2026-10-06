@@ -18,6 +18,9 @@ export const ALLOWED_DOCUMENT_MIME_TYPES = [
 export const MAX_DOCUMENT_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 
 const UPLOAD_ROOT = join(process.cwd(), 'uploads');
+/** Not served by express.static — for files that must never be publicly reachable. */
+const PRIVATE_ROOT = join(process.cwd(), 'private-uploads');
+export const MAX_DATA_IMPORT_BYTES = 10 * 1024 * 1024; // 10MB
 const EXTENSION_BY_MIME: Record<string, string> = {
   'image/png': 'png',
   'image/jpeg': 'jpg',
@@ -97,6 +100,21 @@ export class StorageService {
       ALLOWED_DOCUMENT_MIME_TYPES,
       MAX_DOCUMENT_SIZE_BYTES,
     );
+  }
+
+  /**
+   * Stores a trade-data import file privately and returns an opaque key
+   * (never a disk path). Callers validate format/size first.
+   */
+  async savePrivateDataFile(
+    buffer: Buffer,
+    extension: 'csv' | 'json',
+  ): Promise<{ storageKey: string }> {
+    const dir = join(PRIVATE_ROOT, 'trade-data-imports');
+    await mkdir(dir, { recursive: true });
+    const name = `${randomUUID()}.${extension}`;
+    await writeFile(join(dir, name), buffer);
+    return { storageKey: `private:trade-data-imports/${name}` };
   }
 
   async deleteByUrl(url: string | null | undefined): Promise<void> {

@@ -1,6 +1,7 @@
 import type { CompetitionLevel, ComplianceDifficulty, SeasonalityLevel } from "./enums";
 import type { OpportunitySourceMetadata } from "./opportunities";
 import type { ProductSummary } from "./products";
+import type { SectionProvenance } from "./trade-data";
 
 /**
  * Sprint 6 Product Intelligence contracts. All metrics (YoY, CAGR,
@@ -214,6 +215,12 @@ export interface ProductIntelligence {
   ecosystem: IndiaEcosystemIntelligence;
   markets: DestinationIntelligence;
   risk: ProductRiskBreakdown;
+  /**
+   * Sprint 9 per-section provenance: exportTrend, destinations, seasonality,
+   * ecosystem, productSignals, opportunityScore. Real and demo sections are
+   * labelled individually.
+   */
+  provenance: SectionProvenance;
   /** Contextual notes from the exporter profile; never changes the product score. */
   personalFit: string[];
   generatedAt: string;

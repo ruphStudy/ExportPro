@@ -32,6 +32,9 @@ export const PERMISSIONS = [
   "country_intelligence.view",
   "comparisons.view",
   "recommendations.view",
+  "trade_data.view",
+  "trade_data.manage",
+  "trade_data.ingest",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -75,6 +78,9 @@ export const ROLE_PERMISSIONS: Record<MembershipRole, readonly Permission[]> = {
     "products.create",
     "products.update",
     "products.confirm_classification",
+    "trade_data.view",
+    "trade_data.manage",
+    "trade_data.ingest",
   ],
   // Same as OWNER except owner-only destructive actions (transfer
   // ownership, delete organization) are enforced by explicit role
@@ -106,6 +112,9 @@ export const ROLE_PERMISSIONS: Record<MembershipRole, readonly Permission[]> = {
     "products.create",
     "products.update",
     "products.confirm_classification",
+    "trade_data.view",
+    "trade_data.manage",
+    "trade_data.ingest",
   ],
   // Can run the exporter-onboarding wizard and opportunity discovery day
   // to day, but not manage team membership or organization identity.
@@ -129,6 +138,7 @@ export const ROLE_PERMISSIONS: Record<MembershipRole, readonly Permission[]> = {
     "products.create",
     "products.update",
     "products.confirm_classification",
+    "trade_data.view",
   ],
   SALES: [
     "organization.view",
@@ -160,6 +170,7 @@ export const ROLE_PERMISSIONS: Record<MembershipRole, readonly Permission[]> = {
     "comparisons.view",
     "recommendations.view",
     "products.analyze",
+    "trade_data.view",
   ],
   LOGISTICS: ["organization.view", "team.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view", "products.view", "product_intelligence.view", "country_intelligence.view", "comparisons.view", "recommendations.view"],
   FINANCE: ["organization.view", "team.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view", "products.view", "product_intelligence.view", "country_intelligence.view", "comparisons.view", "recommendations.view"],

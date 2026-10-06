@@ -19,6 +19,7 @@ import { CLASSIFICATION_STATUS_LABELS } from "@/lib/product-labels";
 import { cn } from "@/lib/utils";
 import { RequirePermission } from "@/components/layout/require-permission";
 import { ShareList, TrendChart } from "@/components/product-intelligence/trend-chart";
+import { ProvenanceBadge, SectionProvenanceList } from "@/components/provenance/provenance";
 import { CodeLabel } from "@/components/products/classification-bits";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
@@ -139,15 +140,30 @@ function SourcePanel({ intel }: { intel: ProductIntelligence }) {
   return (
     <section aria-labelledby="source-heading" className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4">
       <h2 id="source-heading" className="sr-only">Data source</h2>
-      {s.isSample && (
+      {(s.isSample || Object.values(intel.provenance ?? {}).some((p) => p.provenanceType === "DEMO")) && (
         <p role="note" className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/5 p-3 text-sm font-medium text-foreground">
           <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden="true" />
-          Sample trade intelligence — not official government statistics.
+          {s.isSample
+            ? "Sample trade intelligence — not official government statistics."
+            : "Some sections still use sample trade intelligence — those sections are not official statistics."}
         </p>
+      )}
+      {intel.provenance && (
+        <SectionProvenanceList
+          provenance={intel.provenance}
+          labels={{
+            exportTrend: "Export trend",
+            destinations: "Export destinations",
+            seasonality: "Seasonality",
+            ecosystem: "States, districts & ports",
+            productSignals: "Risk & product signals",
+            opportunityScore: "Opportunity score",
+          }}
+        />
       )}
       <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3 lg:grid-cols-6">
         <Meta label="Source type" value={SOURCE_TYPE_LABELS[s.sourceType]} />
-        <Meta label="Source" value={s.sourceName} className="col-span-2 sm:col-span-1 lg:col-span-2" />
+        <Meta label={s.isSample ? "Source" : "Export trend source"} value={s.sourceName} className="col-span-2 sm:col-span-1 lg:col-span-2" />
         <Meta label="Period" value={`${s.coverageFrom}–${s.coverageTo}`} />
         <Meta label="Data date" value={new Date(s.sourceDate).toLocaleDateString()} />
         <Meta label="Last updated" value={new Date(s.lastUpdatedAt).toLocaleDateString()} />
@@ -176,7 +192,7 @@ function OpportunitySummary({ intel }: { intel: ProductIntelligence }) {
   return (
     <section aria-labelledby="summary-heading" className="grid grid-cols-1 gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]">
       <Card className="flex flex-col gap-3 p-4">
-        <SectionTitle id="summary-heading" className="text-base">Product Opportunity</SectionTitle>
+        <SectionTitle id="summary-heading" className="text-base">Product Opportunity {intel.provenance?.opportunityScore && <ProvenanceBadge p={intel.provenance.opportunityScore} className="ml-2 align-middle" />}</SectionTitle>
         <div className="flex items-end gap-4">
           <div>
             <p className="text-4xl font-semibold text-foreground">{o.score}<span className="text-base font-normal text-muted-foreground">/100</span></p>
@@ -289,7 +305,7 @@ function TrendSection({ intel }: { intel: ProductIntelligence }) {
     <section aria-labelledby="trend-heading" className="flex flex-col gap-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <SectionTitle id="trend-heading">Export Trend</SectionTitle>
+          <SectionTitle id="trend-heading">Export Trend {intel.provenance?.exportTrend && <ProvenanceBadge p={intel.provenance.exportTrend} className="ml-2 align-middle" />}</SectionTitle>
           <HelperText>Values in {t.currency} as reported by the source (not converted). Confidence {t.confidence}/100.</HelperText>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -431,7 +447,7 @@ function SeasonalitySection({ intel }: { intel: ProductIntelligence }) {
     <section aria-labelledby="season-heading">
       <Card className="p-4">
         <div className="flex flex-wrap items-center gap-2">
-          <SectionTitle id="season-heading" className="text-base">Seasonality</SectionTitle>
+          <SectionTitle id="season-heading" className="text-base">Seasonality {intel.provenance?.seasonality && <ProvenanceBadge p={intel.provenance.seasonality} className="ml-2 align-middle" />}</SectionTitle>
           {s.available && s.level ? (
             <Badge variant={s.level === "LOW" ? "success" : s.level === "MODERATE" ? "warning" : "danger"}>{levelText(s.level)} seasonality</Badge>
           ) : (
@@ -459,7 +475,7 @@ function EcosystemSection({ intel }: { intel: ProductIntelligence }) {
   return (
     <section aria-labelledby="eco-heading" className="flex flex-col gap-4">
       <div>
-        <SectionTitle id="eco-heading">India Export Ecosystem</SectionTitle>
+        <SectionTitle id="eco-heading">India Export Ecosystem {intel.provenance?.ecosystem && <ProvenanceBadge p={intel.provenance.ecosystem} className="ml-2 align-middle" />}</SectionTitle>
         <HelperText>
           Where in India this product is supplied and shipped from. Values are indicative (share × national total). Confidence {e.confidence}/100.
         </HelperText>
@@ -515,7 +531,7 @@ function MarketsSection({ intel }: { intel: ProductIntelligence }) {
   return (
     <section aria-labelledby="markets-heading" className="flex flex-col gap-4">
       <div>
-        <SectionTitle id="markets-heading">Major Export Markets</SectionTitle>
+        <SectionTitle id="markets-heading">Major Export Markets {intel.provenance?.destinations && <ProvenanceBadge p={intel.provenance.destinations} className="ml-2 align-middle" />}</SectionTitle>
         <HelperText>
           Where India currently exports this product — descriptive data, not a recommendation of the best markets. Confidence {m.confidence}/100.
         </HelperText>
@@ -571,7 +587,7 @@ function RiskSection({ intel }: { intel: ProductIntelligence }) {
   return (
     <section aria-labelledby="risk-heading" className="flex flex-col gap-4">
       <div>
-        <SectionTitle id="risk-heading">Risk Intelligence</SectionTitle>
+        <SectionTitle id="risk-heading">Risk Intelligence {intel.provenance?.productSignals && <ProvenanceBadge p={intel.provenance.productSignals} className="ml-2 align-middle" />}</SectionTitle>
         <HelperText>Scores are 0–100 where higher is always more favorable. Product-level signals — not country-specific rules.</HelperText>
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">

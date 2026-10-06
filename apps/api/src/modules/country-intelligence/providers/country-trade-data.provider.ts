@@ -1,5 +1,6 @@
 import type {
   CertificationItem,
+  DataProvenance,
   GuidanceItem,
   IntelligenceLevel,
   OpportunitySourceType,
@@ -54,6 +55,14 @@ export interface ProductCountryMarket {
   packaging: GuidanceItem[];
   labeling: GuidanceItem[];
   certifications: CertificationItem[];
+  /**
+   * Sprint 9: set when destination-reported import facts replaced market
+   * size, import trend, India share, competitors and (when quantities are
+   * in kg) unit value. Tariffs, barriers, guidance and risk stay sample.
+   */
+  realTrade?: { provenance: DataProvenance; pricingReal: boolean };
+  /** Source-quality input for confidence when it differs from the dataset default (mixed sources). */
+  sourceQuality?: number;
 }
 
 export interface CountryDatasetSource {

@@ -215,6 +215,7 @@ export const FreshnessStatus = {
   FRESH: "FRESH",
   RECENT: "RECENT",
   STALE: "STALE",
+  VERY_STALE: "VERY_STALE",
   UNKNOWN: "UNKNOWN",
 } as const;
 export type FreshnessStatus = (typeof FreshnessStatus)[keyof typeof FreshnessStatus];
