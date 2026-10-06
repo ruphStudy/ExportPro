@@ -53,8 +53,9 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Opportunities",
     href: "/opportunities",
     icon: Globe2,
-    status: "placeholder",
-    description: "Discover export/import opportunities by product and country.",
+    status: "active",
+    permission: "opportunities.view",
+    description: "Discover export opportunities by product and country.",
   },
   {
     label: "Products",

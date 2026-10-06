@@ -197,3 +197,55 @@ export const SourceType = {
   USER_PROVIDED: "USER_PROVIDED",
 } as const;
 export type SourceType = (typeof SourceType)[keyof typeof SourceType];
+
+// --- Sprint 4: opportunity discovery -----------------------------------
+
+/** Sprint 4 only ever produces DEMO — see ARCHITECTURE.md "No Fake Government Verification" (same principle applied to trade data). */
+export const OpportunitySourceType = {
+  DEMO: "DEMO",
+  OFFICIAL: "OFFICIAL",
+  PUBLIC_DATA: "PUBLIC_DATA",
+  PARTNER: "PARTNER",
+  INTERNAL: "INTERNAL",
+  AI_DERIVED: "AI_DERIVED",
+} as const;
+export type OpportunitySourceType = (typeof OpportunitySourceType)[keyof typeof OpportunitySourceType];
+
+export const FreshnessStatus = {
+  FRESH: "FRESH",
+  RECENT: "RECENT",
+  STALE: "STALE",
+  UNKNOWN: "UNKNOWN",
+} as const;
+export type FreshnessStatus = (typeof FreshnessStatus)[keyof typeof FreshnessStatus];
+
+export const CompetitionLevel = {
+  LOW: "LOW",
+  MODERATE: "MODERATE",
+  HIGH: "HIGH",
+} as const;
+export type CompetitionLevel = (typeof CompetitionLevel)[keyof typeof CompetitionLevel];
+
+export const ComplianceDifficulty = {
+  EASY: "EASY",
+  MODERATE: "MODERATE",
+  COMPLEX: "COMPLEX",
+} as const;
+export type ComplianceDifficulty = (typeof ComplianceDifficulty)[keyof typeof ComplianceDifficulty];
+
+export const SeasonalityLevel = {
+  LOW: "LOW",
+  MODERATE: "MODERATE",
+  HIGH: "HIGH",
+} as const;
+export type SeasonalityLevel = (typeof SeasonalityLevel)[keyof typeof SeasonalityLevel];
+
+export const OpportunitySort = {
+  BEST: "BEST",
+  GROWTH: "GROWTH",
+  LOW_COMPETITION: "LOW_COMPETITION",
+  HIGH_MARGIN: "HIGH_MARGIN",
+  CONFIDENCE: "CONFIDENCE",
+  RECENT: "RECENT",
+} as const;
+export type OpportunitySort = (typeof OpportunitySort)[keyof typeof OpportunitySort];

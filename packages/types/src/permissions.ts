@@ -20,6 +20,9 @@ export const PERMISSIONS = [
   "onboarding.update",
   "readiness.view",
   "documents.upload",
+  "opportunities.view",
+  "opportunities.save",
+  "opportunities.manage_saved_searches",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -51,6 +54,9 @@ export const ROLE_PERMISSIONS: Record<MembershipRole, readonly Permission[]> = {
     "onboarding.update",
     "readiness.view",
     "documents.upload",
+    "opportunities.view",
+    "opportunities.save",
+    "opportunities.manage_saved_searches",
   ],
   // Same as OWNER except owner-only destructive actions (transfer
   // ownership, delete organization) are enforced by explicit role
@@ -70,9 +76,12 @@ export const ROLE_PERMISSIONS: Record<MembershipRole, readonly Permission[]> = {
     "onboarding.update",
     "readiness.view",
     "documents.upload",
+    "opportunities.view",
+    "opportunities.save",
+    "opportunities.manage_saved_searches",
   ],
-  // Can run the exporter-onboarding wizard day to day, but not manage
-  // team membership or organization identity.
+  // Can run the exporter-onboarding wizard and opportunity discovery day
+  // to day, but not manage team membership or organization identity.
   EXPORT_MANAGER: [
     "organization.view",
     "team.view",
@@ -81,12 +90,23 @@ export const ROLE_PERMISSIONS: Record<MembershipRole, readonly Permission[]> = {
     "onboarding.update",
     "readiness.view",
     "documents.upload",
+    "opportunities.view",
+    "opportunities.save",
+    "opportunities.manage_saved_searches",
   ],
-  SALES: ["organization.view", "team.view", "profile.view", "onboarding.view", "readiness.view"],
-  DOCUMENTATION: ["organization.view", "team.view", "profile.view", "onboarding.view", "readiness.view"],
-  LOGISTICS: ["organization.view", "team.view", "profile.view", "onboarding.view", "readiness.view"],
-  FINANCE: ["organization.view", "team.view", "profile.view", "onboarding.view", "readiness.view"],
-  VIEWER: ["organization.view", "profile.view", "onboarding.view", "readiness.view"],
+  SALES: [
+    "organization.view",
+    "team.view",
+    "profile.view",
+    "onboarding.view",
+    "readiness.view",
+    "opportunities.view",
+    "opportunities.save",
+  ],
+  DOCUMENTATION: ["organization.view", "team.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view"],
+  LOGISTICS: ["organization.view", "team.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view"],
+  FINANCE: ["organization.view", "team.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view"],
+  VIEWER: ["organization.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view"],
 };
 
 export function roleHasPermission(role: MembershipRole, permission: Permission): boolean {

@@ -2,8 +2,9 @@
 // (authentication, sessions, organization identity, invitations) +
 // Sprint 3 (exporter onboarding, preferences, registrations,
 // certifications, documents, readiness scoring).
-// Business-domain models (opportunities, buyers, CRM, costing, etc.)
-// are intentionally NOT created yet — see ARCHITECTURE.md.
+// Sprint 4 (opportunity discovery, scoring, watchlist, saved searches).
+// Business-domain models (buyers, CRM, costing, etc.) are intentionally
+// NOT created yet — see ARCHITECTURE.md.
 
 generator client {
   provider = "prisma-client-js"
@@ -176,6 +177,175 @@ enum OnboardingDocumentType {
   CERTIFICATE
 }
 
+// --- Sprint 4: opportunity discovery ----------------------------------
+
+/// Sprint 4 only ever writes DEMO. Other values exist so Sprint 9's real
+/// ingestion can populate this column without a schema change — see
+/// ARCHITECTURE.md "Data Refresh Architecture".
+enum OpportunitySourceType {
+  DEMO
+  OFFICIAL
+  PUBLIC_DATA
+  PARTNER
+  INTERNAL
+  AI_DERIVED
+}
+
+enum FreshnessStatus {
+  FRESH
+  RECENT
+  STALE
+  UNKNOWN
+}
+
+/// Display-facing bucket. The stored `competitionScore` is always
+/// "higher = more favorable" — see ARCHITECTURE.md "Opportunity Scoring".
+enum CompetitionLevel {
+  LOW
+  MODERATE
+  HIGH
+}
+
+enum ComplianceDifficulty {
+  EASY
+  MODERATE
+  COMPLEX
+}
+
+enum SeasonalityLevel {
+  LOW
+  MODERATE
+  HIGH
+}
+
+enum OpportunitySort {
+  BEST
+  GROWTH
+  LOW_COMPETITION
+  HIGH_MARGIN
+  CONFIDENCE
+  RECENT
+}
+
+/// A potential Product × Destination-Market pair. Global/read-only
+/// reference data — not organization-scoped (see ARCHITECTURE.md
+/// "Tenant Isolation"). All component scores are normalized 0–100
+/// where higher always means better, including the three that are
+/// naturally "bad when high" raw metrics (competition, compliance
+/// difficulty, logistics complexity) — those are inverted before storage.
+model Opportunity {
+  id                    String   @id @default(cuid())
+
+  productName           String
+  productCategoryCode   String
+  destinationCountryCode String
+  tradeDirection        TradeDirection @default(EXPORT)
+
+  overallScore          Int
+  demandScore           Int
+  indiaExportScore      Int
+  growthScore           Int
+  competitionScore      Int
+  complianceScore       Int
+  logisticsScore        Int
+  marginScore           Int
+  seasonalityScore      Int
+  marketDiversityScore  Int
+  confidenceScore       Int
+
+  competitionLevel      CompetitionLevel
+  complianceDifficulty  ComplianceDifficulty
+  seasonalityLevel      SeasonalityLevel
+  /// Typical investment needed to pursue this opportunity — compared
+  /// ordinally against the exporter's Sprint 3 investment range for the budget filter.
+  investmentRange       InvestmentRange
+
+  sourceType            OpportunitySourceType @default(DEMO)
+  sourceName            String
+  sourceUrl             String?
+  sourceDate            DateTime
+  freshnessStatus       FreshnessStatus
+
+  metadata              Json?    @default("{}")
+
+  generatedAt           DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  snapshots             OpportunityScoreSnapshot[]
+  savedBy               SavedOpportunity[]
+
+  @@unique([productName, destinationCountryCode])
+  @@index([destinationCountryCode])
+  @@index([productCategoryCode])
+  @@index([overallScore])
+  @@map("opportunities")
+}
+
+/// Minimal score history — enough for a delta/trend display and future
+/// alerts, not a general time-series platform (see ARCHITECTURE.md).
+model OpportunityScoreSnapshot {
+  id            String   @id @default(cuid())
+
+  opportunityId String
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  overallScore  Int
+  components    Json
+  confidence    Int
+  capturedAt    DateTime @default(now())
+
+  @@index([opportunityId, capturedAt])
+  @@map("opportunity_score_snapshots")
+}
+
+/// Organization-scoped watchlist entry. `alertEnabled`/`minimumScoreChange`/
+/// `lastAlertedScore` are extension points for a future alert engine —
+/// nothing in Sprint 4 sends notifications (see ARCHITECTURE.md "Future Alert Readiness").
+model SavedOpportunity {
+  id                  String   @id @default(cuid())
+
+  organizationId      String
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  opportunityId       String
+  opportunity         Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  savedByUserId       String
+  savedBy             User     @relation(fields: [savedByUserId], references: [id], onDelete: Cascade)
+
+  notes               String?
+  alertEnabled        Boolean  @default(false)
+  minimumScoreChange  Int?
+  lastAlertedScore    Int?
+
+  createdAt           DateTime @default(now())
+
+  @@unique([organizationId, opportunityId])
+  @@index([organizationId])
+  @@map("saved_opportunities")
+}
+
+/// A named, reusable search/filter combination.
+model SavedOpportunitySearch {
+  id              String   @id @default(cuid())
+
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  name            String
+  /// { search?, category?, country?, budget?, minMarginScore?, minGrowthScore?, competitionLevel?, complianceDifficulty?, sort? }
+  query           Json
+
+  createdByUserId String
+  createdBy       User     @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([organizationId])
+  @@map("saved_opportunity_searches")
+}
+
 /// A person who can sign in. Identity is global; all tenant-scoped data
 /// hangs off Membership, never directly off User, so one person can
 /// belong to several organizations without data leaking between them.
@@ -199,6 +369,8 @@ model User {
   verificationTokens   VerificationToken[]
   passwordResetTokens  PasswordResetToken[]
   sentInvitations      OrganizationInvitation[]
+  savedOpportunities   SavedOpportunity[]
+  createdSavedSearches SavedOpportunitySearch[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -313,6 +485,8 @@ model Organization {
   registrations     Registration[]
   certifications    Certification[]
   onboardingDocuments OnboardingDocument[]
+  savedOpportunities  SavedOpportunity[]
+  savedSearches       SavedOpportunitySearch[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

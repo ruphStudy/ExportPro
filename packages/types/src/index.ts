@@ -7,3 +7,4 @@ export * from "./organizations";
 export * from "./reference-data";
 export * from "./countries";
 export * from "./onboarding";
+export * from "./opportunities";
