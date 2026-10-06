@@ -26,6 +26,7 @@ import { CodeLabel } from "@/components/products/classification-bits";
 import { ProvenanceBadge } from "@/components/provenance/provenance";
 import { Badge } from "@/components/ui/badge";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
+import { FindBuyersButton } from "@/components/buyers/buyer-bits";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -141,9 +142,12 @@ function Header({ a }: { a: MarketDeepAnalysis }) {
         <ContextBadges context={a.context} />
         {a.match.level === "HS_HEADING" && <Badge variant="warning">Matched at heading level ({formatTariffCode(a.match.matchedCode)})</Badge>}
       </div>
-      <Button asChild variant="outline" size="sm" className="w-fit">
-        <Link href={`/compare/markets?product=${a.product.id}&countries=${a.country.code}`}>Compare this market</Link>
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        <FindBuyersButton productId={a.product.id} country={a.country.code} variant="primary" />
+        <Button asChild variant="outline" size="sm" className="w-fit">
+          <Link href={`/compare/markets?product=${a.product.id}&countries=${a.country.code}`}>Compare this market</Link>
+        </Button>
+      </div>
     </div>
   );
 }

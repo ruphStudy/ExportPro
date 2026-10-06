@@ -20,6 +20,7 @@ import {
 import { CodeLabel } from "@/components/products/classification-bits";
 import { Badge } from "@/components/ui/badge";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
+import { FindBuyersButton } from "@/components/buyers/buyer-bits";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -227,6 +228,7 @@ function MarketCard({
               <ArrowRight className="size-4" aria-hidden="true" />
             </Link>
           </Button>
+          <FindBuyersButton productId={productId} country={row.country.code} />
           <label className="flex items-center gap-1.5 text-xs text-foreground">
             <input type="checkbox" className="size-4" checked={selected} disabled={selectDisabled} onChange={onToggle} />
             Add {row.country.name} to comparison

@@ -13,3 +13,4 @@ export * from "./product-intelligence";
 export * from "./country-intelligence";
 export * from "./comparisons";
 export * from "./trade-data";
+export * from "./buyers";

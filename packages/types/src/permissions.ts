@@ -35,6 +35,11 @@ export const PERMISSIONS = [
   "trade_data.view",
   "trade_data.manage",
   "trade_data.ingest",
+  "buyers.view",
+  "buyers.save",
+  "buyers.notes",
+  "buyers.crm_handoff",
+  "buyers.create",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -81,6 +86,11 @@ export const ROLE_PERMISSIONS: Record<MembershipRole, readonly Permission[]> = {
     "trade_data.view",
     "trade_data.manage",
     "trade_data.ingest",
+    "buyers.view",
+    "buyers.save",
+    "buyers.notes",
+    "buyers.crm_handoff",
+    "buyers.create",
   ],
   // Same as OWNER except owner-only destructive actions (transfer
   // ownership, delete organization) are enforced by explicit role
@@ -115,6 +125,11 @@ export const ROLE_PERMISSIONS: Record<MembershipRole, readonly Permission[]> = {
     "trade_data.view",
     "trade_data.manage",
     "trade_data.ingest",
+    "buyers.view",
+    "buyers.save",
+    "buyers.notes",
+    "buyers.crm_handoff",
+    "buyers.create",
   ],
   // Can run the exporter-onboarding wizard and opportunity discovery day
   // to day, but not manage team membership or organization identity.
@@ -139,6 +154,11 @@ export const ROLE_PERMISSIONS: Record<MembershipRole, readonly Permission[]> = {
     "products.update",
     "products.confirm_classification",
     "trade_data.view",
+    "buyers.view",
+    "buyers.save",
+    "buyers.notes",
+    "buyers.crm_handoff",
+    "buyers.create",
   ],
   SALES: [
     "organization.view",
@@ -154,6 +174,11 @@ export const ROLE_PERMISSIONS: Record<MembershipRole, readonly Permission[]> = {
     "comparisons.view",
     "recommendations.view",
     "products.analyze",
+    "buyers.view",
+    "buyers.save",
+    "buyers.notes",
+    "buyers.crm_handoff",
+    "buyers.create",
   ],
   // Classification support: can run analyses, answer clarifications and
   // pre-select candidates, but confirming/saving stays with managers.
@@ -171,10 +196,11 @@ export const ROLE_PERMISSIONS: Record<MembershipRole, readonly Permission[]> = {
     "recommendations.view",
     "products.analyze",
     "trade_data.view",
+    "buyers.view",
   ],
-  LOGISTICS: ["organization.view", "team.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view", "products.view", "product_intelligence.view", "country_intelligence.view", "comparisons.view", "recommendations.view"],
-  FINANCE: ["organization.view", "team.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view", "products.view", "product_intelligence.view", "country_intelligence.view", "comparisons.view", "recommendations.view"],
-  VIEWER: ["organization.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view", "products.view", "product_intelligence.view", "country_intelligence.view", "comparisons.view", "recommendations.view"],
+  LOGISTICS: ["organization.view", "team.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view", "products.view", "product_intelligence.view", "country_intelligence.view", "comparisons.view", "recommendations.view", "buyers.view"],
+  FINANCE: ["organization.view", "team.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view", "products.view", "product_intelligence.view", "country_intelligence.view", "comparisons.view", "recommendations.view", "buyers.view"],
+  VIEWER: ["organization.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view", "products.view", "product_intelligence.view", "country_intelligence.view", "comparisons.view", "recommendations.view", "buyers.view"],
 };
 
 export function roleHasPermission(role: MembershipRole, permission: Permission): boolean {

@@ -22,6 +22,7 @@ import { ProductIntelligenceModule } from './modules/product-intelligence/produc
 import { CountryIntelligenceModule } from './modules/country-intelligence/country-intelligence.module';
 import { ComparisonsModule } from './modules/comparisons/comparisons.module';
 import { TradeDataModule } from './modules/trade-data/trade-data.module';
+import { BuyersModule } from './modules/buyers/buyers.module';
 import { DevModule } from './modules/dev/dev.module';
 
 /**
@@ -53,6 +54,7 @@ import { DevModule } from './modules/dev/dev.module';
     CountryIntelligenceModule,
     ComparisonsModule,
     TradeDataModule,
+    BuyersModule,
     // Dev-only mailbox for reading OTP/reset emails without a real mail provider.
     ...(process.env.NODE_ENV === 'production' ? [] : [DevModule]),
   ],

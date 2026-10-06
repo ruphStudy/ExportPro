@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { RequirePermission } from "@/components/layout/require-permission";
 import { MarketSourcePanel, riskVariant, ScorePill, titleCase } from "@/components/markets/market-bits";
 import { Badge } from "@/components/ui/badge";
+import { FindBuyersButton } from "@/components/buyers/buyer-bits";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -215,6 +216,7 @@ function RecommendationCard({ rec }: { rec: PersonalizedRecommendation }) {
           {rec.savedProductId && (
             <Button asChild variant="outline" size="sm"><Link href={`/compare/markets?product=${rec.savedProductId}&countries=${rec.country.code}`}>Compare markets</Link></Button>
           )}
+          {rec.savedProductId && <FindBuyersButton productId={rec.savedProductId} country={rec.country.code} />}
           {rec.opportunity && canSave && (
             <Button variant="outline" size="sm" onClick={() => toggleSave.mutate()} loading={toggleSave.isPending}>
               {rec.opportunity.isSaved ? <BookmarkCheck className="size-4" aria-hidden="true" /> : <Bookmark className="size-4" aria-hidden="true" />}

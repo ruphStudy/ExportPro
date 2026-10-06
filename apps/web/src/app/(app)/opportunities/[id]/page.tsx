@@ -17,6 +17,7 @@ import { OpportunityRadar } from "@/components/opportunities/opportunity-radar";
 import { ProvenanceBadge } from "@/components/provenance/provenance";
 import { RequirePermission } from "@/components/layout/require-permission";
 import { Badge } from "@/components/ui/badge";
+import { FindBuyersButton } from "@/components/buyers/buyer-bits";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ErrorState } from "@/components/ui/error-state";
@@ -106,6 +107,13 @@ function OpportunityDetailContent() {
             <Button asChild variant="outline">
               <Link href={`/products/${savedProduct.data.id}/markets/${o.destinationCountryCode}`}>View Deep Market Analysis</Link>
             </Button>
+          )}
+          {savedProduct.data ? (
+            <FindBuyersButton productId={savedProduct.data.id} country={o.destinationCountryCode} size="md" />
+          ) : (
+            hasPermission(session, "buyers.view") && (
+              <span className="flex items-center text-xs text-muted-foreground" role="note">Find buyers: analyze and save this product first so buyers can be matched by HS code.</span>
+            )
           )}
           {canAnalyzeProduct && !savedProduct.data && (
             // Only prefills the analysis form — nothing is classified, saved or changed on the opportunity.

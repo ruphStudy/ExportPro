@@ -236,46 +236,46 @@ enum OpportunitySort {
 /// naturally "bad when high" raw metrics (competition, compliance
 /// difficulty, logistics complexity) — those are inverted before storage.
 model Opportunity {
-  id                    String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  productName           String
-  productCategoryCode   String
+  productName            String
+  productCategoryCode    String
   destinationCountryCode String
-  tradeDirection        TradeDirection @default(EXPORT)
+  tradeDirection         TradeDirection @default(EXPORT)
 
-  overallScore          Int
-  demandScore           Int
-  indiaExportScore      Int
-  growthScore           Int
-  competitionScore      Int
-  complianceScore       Int
-  logisticsScore        Int
-  marginScore           Int
-  seasonalityScore      Int
-  marketDiversityScore  Int
-  confidenceScore       Int
+  overallScore         Int
+  demandScore          Int
+  indiaExportScore     Int
+  growthScore          Int
+  competitionScore     Int
+  complianceScore      Int
+  logisticsScore       Int
+  marginScore          Int
+  seasonalityScore     Int
+  marketDiversityScore Int
+  confidenceScore      Int
 
-  competitionLevel      CompetitionLevel
-  complianceDifficulty  ComplianceDifficulty
-  seasonalityLevel      SeasonalityLevel
+  competitionLevel     CompetitionLevel
+  complianceDifficulty ComplianceDifficulty
+  seasonalityLevel     SeasonalityLevel
   /// Typical investment needed to pursue this opportunity — compared
   /// ordinally against the exporter's Sprint 3 investment range for the budget filter.
-  investmentRange       InvestmentRange
+  investmentRange      InvestmentRange
 
-  sourceType            OpportunitySourceType @default(DEMO)
-  sourceName            String
-  sourceUrl             String?
-  sourceDate            DateTime
-  freshnessStatus       FreshnessStatus
+  sourceType      OpportunitySourceType @default(DEMO)
+  sourceName      String
+  sourceUrl       String?
+  sourceDate      DateTime
+  freshnessStatus FreshnessStatus
 
-  metadata              Json?    @default("{}")
+  metadata Json? @default("{}")
 
-  generatedAt           DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  generatedAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  snapshots             OpportunityScoreSnapshot[]
-  savedBy               SavedOpportunity[]
-  productAnalyses       ProductAnalysis[]
+  snapshots       OpportunityScoreSnapshot[]
+  savedBy         SavedOpportunity[]
+  productAnalyses ProductAnalysis[]
 
   @@unique([productName, destinationCountryCode])
   @@index([destinationCountryCode])
@@ -287,15 +287,15 @@ model Opportunity {
 /// Minimal score history — enough for a delta/trend display and future
 /// alerts, not a general time-series platform (see ARCHITECTURE.md).
 model OpportunityScoreSnapshot {
-  id            String   @id @default(cuid())
+  id String @id @default(cuid())
 
   opportunityId String
   opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
 
-  overallScore  Int
-  components    Json
-  confidence    Int
-  capturedAt    DateTime @default(now())
+  overallScore Int
+  components   Json
+  confidence   Int
+  capturedAt   DateTime @default(now())
 
   @@index([opportunityId, capturedAt])
   @@map("opportunity_score_snapshots")
@@ -305,23 +305,23 @@ model OpportunityScoreSnapshot {
 /// `lastAlertedScore` are extension points for a future alert engine —
 /// nothing in Sprint 4 sends notifications (see ARCHITECTURE.md "Future Alert Readiness").
 model SavedOpportunity {
-  id                  String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  organizationId      String
-  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  opportunityId       String
-  opportunity         Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  opportunityId String
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
 
-  savedByUserId       String
-  savedBy             User     @relation(fields: [savedByUserId], references: [id], onDelete: Cascade)
+  savedByUserId String
+  savedBy       User   @relation(fields: [savedByUserId], references: [id], onDelete: Cascade)
 
-  notes               String?
-  alertEnabled        Boolean  @default(false)
-  minimumScoreChange  Int?
-  lastAlertedScore    Int?
+  notes              String?
+  alertEnabled       Boolean @default(false)
+  minimumScoreChange Int?
+  lastAlertedScore   Int?
 
-  createdAt           DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@unique([organizationId, opportunityId])
   @@index([organizationId])
@@ -330,20 +330,20 @@ model SavedOpportunity {
 
 /// A named, reusable search/filter combination.
 model SavedOpportunitySearch {
-  id              String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  organizationId  String
-  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  name            String
+  name  String
   /// { search?, category?, country?, budget?, minMarginScore?, minGrowthScore?, competitionLevel?, complianceDifficulty?, sort? }
-  query           Json
+  query Json
 
   createdByUserId String
-  createdBy       User     @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
+  createdBy       User   @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([organizationId])
   @@map("saved_opportunity_searches")
@@ -375,7 +375,7 @@ model User {
   savedOpportunities   SavedOpportunity[]
   createdSavedSearches SavedOpportunitySearch[]
   productAnalyses      ProductAnalysis[]
-  confirmedProducts    OrganizationProduct[] @relation("ProductConfirmedBy")
+  confirmedProducts    OrganizationProduct[]    @relation("ProductConfirmedBy")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -387,26 +387,26 @@ model User {
 /// carries an opaque token; only its SHA-256 hash is ever persisted —
 /// see ARCHITECTURE.md "Authentication Architecture".
 model Session {
-  id          String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  tokenHash   String   @unique
+  tokenHash String @unique
 
   /// Server-resolved "current organization" for this device, persisted
   /// here (not trusted from the client) so it survives refresh and the
   /// organization switcher. Nullable until the user has a membership.
   activeOrganizationId String?
 
-  userAgent   String?
-  ipAddress   String?
-  rememberMe  Boolean  @default(false)
+  userAgent  String?
+  ipAddress  String?
+  rememberMe Boolean @default(false)
 
-  createdAt   DateTime @default(now())
-  lastUsedAt  DateTime @default(now())
-  expiresAt   DateTime
-  revokedAt   DateTime?
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime  @default(now())
+  expiresAt  DateTime
+  revokedAt  DateTime?
 
   @@index([userId])
   @@map("sessions")
@@ -416,19 +416,19 @@ model Session {
 /// stored — only its hash — and it is single-use (consumedAt) and
 /// rate-limited by `attempts`.
 model VerificationToken {
-  id          String              @id @default(cuid())
+  id String @id @default(cuid())
 
-  userId      String
-  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  codeHash    String
-  purpose     VerificationPurpose @default(EMAIL_VERIFICATION)
-  attempts    Int                 @default(0)
+  codeHash String
+  purpose  VerificationPurpose @default(EMAIL_VERIFICATION)
+  attempts Int                 @default(0)
 
-  expiresAt   DateTime
-  consumedAt  DateTime?
+  expiresAt  DateTime
+  consumedAt DateTime?
 
-  createdAt   DateTime            @default(now())
+  createdAt DateTime @default(now())
 
   @@index([userId, purpose])
   @@map("verification_tokens")
@@ -437,16 +437,16 @@ model VerificationToken {
 /// Single-use password reset token. The raw token is emailed to the
 /// user and never stored — only its hash.
 model PasswordResetToken {
-  id          String    @id @default(cuid())
+  id String @id @default(cuid())
 
-  userId      String
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  tokenHash   String    @unique
-  expiresAt   DateTime
-  consumedAt  DateTime?
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  consumedAt DateTime?
 
-  createdAt   DateTime  @default(now())
+  createdAt DateTime @default(now())
 
   @@index([userId])
   @@map("password_reset_tokens")
@@ -456,23 +456,23 @@ model PasswordResetToken {
 /// carry an organizationId that traces back here — this is the root of
 /// the multi-tenancy strategy (see ARCHITECTURE.md "Tenant Isolation").
 model Organization {
-  id              String           @id @default(cuid())
-  name            String
-  legalName       String?
-  slug            String           @unique
-  businessType    BusinessType?
-  industry        String?
-  website         String?
-  email           String?
-  phone           String?
-  logoUrl         String?
+  id           String        @id @default(cuid())
+  name         String
+  legalName    String?
+  slug         String        @unique
+  businessType BusinessType?
+  industry     String?
+  website      String?
+  email        String?
+  phone        String?
+  logoUrl      String?
 
-  addressLine1    String?
-  addressLine2    String?
-  city            String?
-  state           String?
-  postalCode      String?
-  country         String?
+  addressLine1 String?
+  addressLine2 String?
+  city         String?
+  state        String?
+  postalCode   String?
+  country      String?
 
   timezone        String           @default("UTC")
   defaultCurrency String           @default("USD")
@@ -480,20 +480,23 @@ model Organization {
   settings        Json?            @default("{}")
   isActive        Boolean          @default(true)
 
-  memberships   Membership[]
-  auditLogs     AuditLog[]
-  invitations   OrganizationInvitation[]
+  memberships Membership[]
+  auditLogs   AuditLog[]
+  invitations OrganizationInvitation[]
 
-  exporterProfile   ExporterProfile?
-  productInterests  ProductInterest[]
-  targetCountries   TargetCountry[]
-  registrations     Registration[]
-  certifications    Certification[]
+  exporterProfile     ExporterProfile?
+  productInterests    ProductInterest[]
+  targetCountries     TargetCountry[]
+  registrations       Registration[]
+  certifications      Certification[]
   onboardingDocuments OnboardingDocument[]
   savedOpportunities  SavedOpportunity[]
   savedSearches       SavedOpportunitySearch[]
   productAnalyses     ProductAnalysis[]
   products            OrganizationProduct[]
+  privateBuyers       BuyerCompany[]
+  buyerStates         OrganizationBuyer[]
+  buyerLeads          BuyerLead[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -504,19 +507,19 @@ model Organization {
 /// Join model between User and Organization — this is the row every
 /// tenant-aware query should pivot through (see TenantGuard / CurrentOrg).
 model Membership {
-  id             String           @id @default(cuid())
+  id String @id @default(cuid())
 
-  userId         String
-  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   organizationId String
-  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  role           MembershipRole   @default(VIEWER)
-  status         MembershipStatus @default(ACTIVE)
+  role   MembershipRole   @default(VIEWER)
+  status MembershipStatus @default(ACTIVE)
 
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([userId, organizationId])
   @@index([organizationId])
@@ -527,23 +530,23 @@ model Membership {
 /// once the invited person accepts — see ARCHITECTURE.md "Team
 /// Management". The raw token is emailed; only its hash is stored.
 model OrganizationInvitation {
-  id             String       @id @default(cuid())
+  id String @id @default(cuid())
 
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  email          String
-  role           MembershipRole
+  email String
+  role  MembershipRole
 
-  invitedById    String
-  invitedBy      User         @relation(fields: [invitedById], references: [id], onDelete: Cascade)
+  invitedById String
+  invitedBy   User   @relation(fields: [invitedById], references: [id], onDelete: Cascade)
 
-  tokenHash      String       @unique
-  expiresAt      DateTime
-  acceptedAt     DateTime?
-  revokedAt      DateTime?
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  acceptedAt DateTime?
+  revokedAt  DateTime?
 
-  createdAt      DateTime     @default(now())
+  createdAt DateTime @default(now())
 
   @@index([organizationId])
   @@index([email])
@@ -554,20 +557,20 @@ model OrganizationInvitation {
 /// shared AuditService rather than ad hoc logging inside features —
 /// see ARCHITECTURE.md "Audit Strategy".
 model AuditLog {
-  id             String   @id @default(cuid())
+  id String @id @default(cuid())
 
   organizationId String?
   organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
 
-  actorId        String?
-  actor          User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  actorId String?
+  actor   User?   @relation(fields: [actorId], references: [id], onDelete: SetNull)
 
-  action         String
-  entityType     String
-  entityId       String
-  metadata       Json?    @default("{}")
+  action     String
+  entityType String
+  entityId   String
+  metadata   Json?  @default("{}")
 
-  createdAt      DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([organizationId, entityType, entityId])
   @@map("audit_logs")
@@ -581,7 +584,7 @@ model AuditLog {
 /// interests, countries, registrations, certifications) live in their
 /// own models below — see ARCHITECTURE.md "Sprint 3 Data Model".
 model ExporterProfile {
-  id             String @id @default(cuid())
+  id String @id @default(cuid())
 
   organizationId String       @unique
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -602,7 +605,7 @@ model ExporterProfile {
   /// config lists (@exportpro/types) — a stable, code-defined taxonomy
   /// rather than a database table, since the list itself rarely changes
   /// independently of a deploy. See ARCHITECTURE.md "Reference Data".
-  productCategories  String[] @default([])
+  productCategories   String[] @default([])
   preferredIndustries String[] @default([])
 
   investmentRange    InvestmentRange?
@@ -622,7 +625,7 @@ model ExporterProfile {
 /// Free-text + an optional category code — no HS classification here,
 /// that is explicitly Sprint 4/5 (see ARCHITECTURE.md).
 model ProductInterest {
-  id             String       @id @default(cuid())
+  id String @id @default(cuid())
 
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -634,11 +637,11 @@ model ProductInterest {
 
   /// Sprint 5: set once this interest has been analyzed and confirmed into
   /// a saved product. The interest itself is never overwritten or deleted.
-  productId    String?
-  product      OrganizationProduct? @relation(fields: [productId], references: [id], onDelete: SetNull)
-  analyzedAt   DateTime?
+  productId  String?
+  product    OrganizationProduct? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  analyzedAt DateTime?
 
-  analyses     ProductAnalysis[]
+  analyses ProductAnalysis[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -651,7 +654,7 @@ model ProductInterest {
 /// ISO 3166-1 alpha-2, validated against the shared COUNTRIES list
 /// rather than stored as a free-text name.
 model TargetCountry {
-  id             String       @id @default(cuid())
+  id String @id @default(cuid())
 
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -670,7 +673,7 @@ model TargetCountry {
 /// ARCHITECTURE.md "No Fake Government Verification": `verificationStatus`
 /// is never set to VERIFIED by anything in this sprint.
 model Registration {
-  id             String       @id @default(cuid())
+  id String @id @default(cuid())
 
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -697,7 +700,7 @@ model Registration {
 /// APEDA-adjacent certificates, custom, ...). Deliberately not the full
 /// Document Vault from a later sprint — see ARCHITECTURE.md.
 model Certification {
-  id             String       @id @default(cuid())
+  id String @id @default(cuid())
 
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -730,7 +733,7 @@ model Certification {
 /// Registration/Certification so a future Document Vault can adopt this
 /// table (or migrate from it) without reshaping those two.
 model OnboardingDocument {
-  id             String       @id @default(cuid())
+  id String @id @default(cuid())
 
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -812,7 +815,7 @@ enum TariffReferenceSourceType {
 /// official dataset import later writes the same table with sourceType
 /// OFFICIAL, so product APIs don't change.
 model TariffCode {
-  id          String     @id @default(cuid())
+  id          String                    @id @default(cuid())
   codeSystem  CodeSystem
   code        String
   /// Digit count: 2 chapter, 4 heading, 6 subheading, 8 ITC-HS tariff line.
@@ -821,10 +824,10 @@ model TariffCode {
   parentCode  String?
   sourceType  TariffReferenceSourceType @default(DEVELOPMENT_SAMPLE)
   sourceName  String
-  isActive    Boolean    @default(true)
+  isActive    Boolean                   @default(true)
 
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([codeSystem, code])
   @@index([parentCode])
@@ -835,56 +838,56 @@ model TariffCode {
 /// candidate codes. Temporary/advisory state — distinct from the confirmed
 /// OrganizationProduct it may eventually produce.
 model ProductAnalysis {
-  id                     String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  organizationId         String
-  organization           Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  createdByUserId        String
-  createdBy              User     @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdByUserId String
+  createdBy       User         @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
 
-  inputType              ProductInputType
-  rawInput               String
+  inputType            ProductInputType
+  rawInput             String
   /// Hash of normalized input + hints, used to reuse a recent identical analysis instead of re-calling the provider.
-  inputKey               String
-  categoryHint           String?
-  details                Json     @default("{}")
+  inputKey             String
+  categoryHint         String?
+  details              Json             @default("{}")
   /// [{ questionId, question, answer }]
-  clarificationAnswers   Json     @default("[]")
+  clarificationAnswers Json             @default("[]")
 
-  normalizedProductName  String
-  productSummary         String
-  suggestedCategoryCode  String
+  normalizedProductName    String
+  productSummary           String
+  suggestedCategoryCode    String
   /// { material, form, intendedUse, composition }
-  identification         Json     @default("{}")
+  identification           Json   @default("{}")
   identificationConfidence Int?
 
-  ambiguityStatus        AmbiguityStatus
-  ambiguityReason        String?
+  ambiguityStatus     AmbiguityStatus
+  ambiguityReason     String?
   /// [{ id, question, options, allowFreeText }]
-  clarifyingQuestions    Json     @default("[]")
+  clarifyingQuestions Json            @default("[]")
 
-  status                 ProductAnalysisStatus @default(PENDING_REVIEW)
-  revision               Int      @default(1)
+  status   ProductAnalysisStatus @default(PENDING_REVIEW)
+  revision Int                   @default(1)
 
-  sourceType             AnalysisSourceType
-  provider               String
-  model                  String?
-  promptVersion          String
-  generatedAt            DateTime @default(now())
+  sourceType    AnalysisSourceType
+  provider      String
+  model         String?
+  promptVersion String
+  generatedAt   DateTime           @default(now())
 
-  productInterestId      String?
-  productInterest        ProductInterest? @relation(fields: [productInterestId], references: [id], onDelete: SetNull)
-  opportunityId          String?
-  opportunity            Opportunity? @relation(fields: [opportunityId], references: [id], onDelete: SetNull)
+  productInterestId String?
+  productInterest   ProductInterest?     @relation(fields: [productInterestId], references: [id], onDelete: SetNull)
+  opportunityId     String?
+  opportunity       Opportunity?         @relation(fields: [opportunityId], references: [id], onDelete: SetNull)
   /// The saved product this analysis belongs to (re-analysis) or was confirmed into.
-  productId              String?
-  product                OrganizationProduct? @relation("ProductAnalyses", fields: [productId], references: [id], onDelete: SetNull)
+  productId         String?
+  product           OrganizationProduct? @relation("ProductAnalyses", fields: [productId], references: [id], onDelete: SetNull)
 
-  candidates             ProductClassificationCandidate[]
-  confirmedProducts      OrganizationProduct[] @relation("ProductConfirmedAnalysis")
+  candidates        ProductClassificationCandidate[]
+  confirmedProducts OrganizationProduct[]            @relation("ProductConfirmedAnalysis")
 
-  createdAt              DateTime @default(now())
-  updatedAt              DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([organizationId, createdAt])
   @@index([organizationId, inputKey])
@@ -892,10 +895,10 @@ model ProductAnalysis {
 }
 
 model ProductClassificationCandidate {
-  id                      String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  analysisId              String
-  analysis                ProductAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  analysisId String
+  analysis   ProductAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
 
   codeSystem              CodeSystem
   code                    String
@@ -905,12 +908,12 @@ model ProductClassificationCandidate {
   rank                    Int
   reasoningSummary        String?
   source                  ClassificationSource
-  inReferenceData         Boolean  @default(false)
+  inReferenceData         Boolean              @default(false)
   referenceDescription    String?
-  selectedByUser          Boolean  @default(false)
-  confirmedForPlatformUse Boolean  @default(false)
+  selectedByUser          Boolean              @default(false)
+  confirmedForPlatformUse Boolean              @default(false)
 
-  createdAt               DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([analysisId])
   @@map("product_classification_candidates")
@@ -920,40 +923,42 @@ model ProductClassificationCandidate {
 /// use only) classification. Later modules (product/country intelligence,
 /// buyers, costing, compliance) reference this, not ProductAnalysis.
 model OrganizationProduct {
-  id                         String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  organizationId             String
-  organization               Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  displayName                String
+  displayName    String
   /// Lowercased/trimmed displayName for duplicate detection.
-  normalizedName             String
-  description                String?
-  categoryCode               String?
+  normalizedName String
+  description    String?
+  categoryCode   String?
 
-  classificationCode         String
-  codeSystem                 CodeSystem
-  hsCode                     String
-  itcHsCode                  String?
-  classificationDescription  String
-  classificationStatus       ProductClassificationStatus
-  classificationSource       ClassificationSource
-  classificationConfidence   Int?
-  lowConfidenceAcknowledged  Boolean  @default(false)
+  classificationCode        String
+  codeSystem                CodeSystem
+  hsCode                    String
+  itcHsCode                 String?
+  classificationDescription String
+  classificationStatus      ProductClassificationStatus
+  classificationSource      ClassificationSource
+  classificationConfidence  Int?
+  lowConfidenceAcknowledged Boolean                     @default(false)
 
-  confirmedByUserId          String?
-  confirmedBy                User?    @relation("ProductConfirmedBy", fields: [confirmedByUserId], references: [id], onDelete: SetNull)
-  confirmedAt                DateTime?
+  confirmedByUserId String?
+  confirmedBy       User?     @relation("ProductConfirmedBy", fields: [confirmedByUserId], references: [id], onDelete: SetNull)
+  confirmedAt       DateTime?
 
-  analysisId                 String?
-  analysis                   ProductAnalysis? @relation("ProductConfirmedAnalysis", fields: [analysisId], references: [id], onDelete: SetNull)
+  analysisId String?
+  analysis   ProductAnalysis? @relation("ProductConfirmedAnalysis", fields: [analysisId], references: [id], onDelete: SetNull)
 
-  analyses                   ProductAnalysis[] @relation("ProductAnalyses")
-  productInterests           ProductInterest[]
+  analyses         ProductAnalysis[]   @relation("ProductAnalyses")
+  productInterests ProductInterest[]
+  buyerStates      OrganizationBuyer[]
+  buyerLeads       BuyerLead[]
 
-  createdByUserId            String
-  createdAt                  DateTime @default(now())
-  updatedAt                  DateTime @updatedAt
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@index([organizationId, normalizedName])
   @@index([organizationId, classificationCode])
@@ -968,7 +973,7 @@ model OrganizationProduct {
 /// access is always checked on the OrganizationProduct first. A Sprint 9
 /// ingestion provider produces new datasetVersions; old rows remain as history.
 model ProductIntelligenceSnapshot {
-  id               String   @id @default(cuid())
+  id               String                @id @default(cuid())
   datasetKey       String
   datasetVersion   String
   codeSystem       CodeSystem
@@ -981,7 +986,7 @@ model ProductIntelligenceSnapshot {
   components       Json
   /// Full computed ProductIntelligence global section (trend, ecosystem, markets, risk).
   payload          Json
-  generatedAt      DateTime @default(now())
+  generatedAt      DateTime              @default(now())
 
   @@unique([datasetKey, datasetVersion])
   @@index([code])
@@ -1090,23 +1095,23 @@ enum TradeDataIssueSeverity {
 /// Static attributes are synced from code (source-registry.ts); `enabled`
 /// and run-derived fields are operational state.
 model TradeDataSource {
-  id                    String   @id @default(cuid())
-  code                  String   @unique
-  name                  String
-  authority             String
-  sourceType            TradeDataSourceType
-  accessMethod          DataAccessMethod
-  baseUrl               String?
-  termsUrl              String?
-  description           String
-  countryCode           String?
-  dataDomains           String[]
-  updateFrequency       UpdateFrequency
-  expectedLagDays       Int
-  qualityTier           SourceQualityTier
-  official              Boolean
-  enabled               Boolean  @default(true)
-  notes                 String?
+  id              String              @id @default(cuid())
+  code            String              @unique
+  name            String
+  authority       String
+  sourceType      TradeDataSourceType
+  accessMethod    DataAccessMethod
+  baseUrl         String?
+  termsUrl        String?
+  description     String
+  countryCode     String?
+  dataDomains     String[]
+  updateFrequency UpdateFrequency
+  expectedLagDays Int
+  qualityTier     SourceQualityTier
+  official        Boolean
+  enabled         Boolean             @default(true)
+  notes           String?
 
   lastSuccessfulRunAt   DateTime?
   latestSourcePeriod    String?
@@ -1114,33 +1119,34 @@ model TradeDataSource {
   latestPeriodEnd       DateTime?
   nextExpectedRefreshAt DateTime?
 
-  runs                  TradeDataIngestionRun[]
-  rawRecords            TradeDataRawRecord[]
-  facts                 TradeFact[]
-  issues                TradeDataIssueRecord[]
+  runs               TradeDataIngestionRun[]
+  rawRecords         TradeDataRawRecord[]
+  facts              TradeFact[]
+  issues             TradeDataIssueRecord[]
+  buyerSourceRecords BuyerSourceRecord[]
 
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("trade_data_sources")
 }
 
 model TradeDataIngestionRun {
-  id                 String   @id @default(cuid())
+  id                 String             @id @default(cuid())
   sourceId           String
-  source             TradeDataSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  source             TradeDataSource    @relation(fields: [sourceId], references: [id], onDelete: Cascade)
   status             IngestionRunStatus @default(PENDING)
   mode               IngestionMode
   datasetKeys        String[]
   startedAt          DateTime?
   finishedAt         DateTime?
-  recordsFetched     Int      @default(0)
-  recordsAccepted    Int      @default(0)
-  recordsRejected    Int      @default(0)
-  recordsInserted    Int      @default(0)
-  recordsUpdated     Int      @default(0)
-  duplicatesSkipped  Int      @default(0)
-  unresolvedMappings Int      @default(0)
+  recordsFetched     Int                @default(0)
+  recordsAccepted    Int                @default(0)
+  recordsRejected    Int                @default(0)
+  recordsInserted    Int                @default(0)
+  recordsUpdated     Int                @default(0)
+  duplicatesSkipped  Int                @default(0)
+  unresolvedMappings Int                @default(0)
   qualityScore       Int?
   checkpoint         Json?
   sourceVersion      String?
@@ -1153,11 +1159,11 @@ model TradeDataIngestionRun {
   initiatedByUserId  String?
   organizationId     String?
 
-  rawRecords         TradeDataRawRecord[]
-  issues             TradeDataIssueRecord[]
-  facts              TradeFact[]
+  rawRecords TradeDataRawRecord[]
+  issues     TradeDataIssueRecord[]
+  facts      TradeFact[]
 
-  createdAt          DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([sourceId, createdAt])
   @@index([sourceId, fileChecksum])
@@ -1166,9 +1172,9 @@ model TradeDataIngestionRun {
 
 /// Raw lineage at fetched-unit level (one API response page or one file chunk) — kept for traceability and reprocessing.
 model TradeDataRawRecord {
-  id              String   @id @default(cuid())
+  id              String                @id @default(cuid())
   sourceId        String
-  source          TradeDataSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  source          TradeDataSource       @relation(fields: [sourceId], references: [id], onDelete: Cascade)
   ingestionRunId  String
   run             TradeDataIngestionRun @relation(fields: [ingestionRunId], references: [id], onDelete: Cascade)
   datasetKey      String
@@ -1177,9 +1183,9 @@ model TradeDataRawRecord {
   sourcePeriod    String?
   sourceUpdatedAt DateTime?
   checksum        String
-  importedAt      DateTime @default(now())
+  importedAt      DateTime              @default(now())
 
-  facts           TradeFact[]
+  facts TradeFact[]
 
   @@index([sourceId, datasetKey, checksum])
   @@map("trade_data_raw_records")
@@ -1189,18 +1195,18 @@ model TradeDataRawRecord {
 /// alongside normalized ones. `factKey` is a deterministic identity per
 /// source so re-ingestion upserts instead of duplicating.
 model TradeFact {
-  id                  String   @id @default(cuid())
-  factKey             String   @unique
-  contentHash         String
-  revision            Int      @default(1)
-  sourceId            String
-  source              TradeDataSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
-  ingestionRunId      String
-  run                 TradeDataIngestionRun @relation(fields: [ingestionRunId], references: [id])
-  rawRecordId         String?
-  rawRecord           TradeDataRawRecord? @relation(fields: [rawRecordId], references: [id], onDelete: SetNull)
-  sourceRecordKey     String?
-  datasetKey          String
+  id              String                @id @default(cuid())
+  factKey         String                @unique
+  contentHash     String
+  revision        Int                   @default(1)
+  sourceId        String
+  source          TradeDataSource       @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  ingestionRunId  String
+  run             TradeDataIngestionRun @relation(fields: [ingestionRunId], references: [id])
+  rawRecordId     String?
+  rawRecord       TradeDataRawRecord?   @relation(fields: [rawRecordId], references: [id], onDelete: SetNull)
+  sourceRecordKey String?
+  datasetKey      String
 
   tradeDirection      TradeDirection
   codeSystem          CodeSystem
@@ -1213,39 +1219,39 @@ model TradeFact {
   sourcePartner       String?
   partnerLabel        String
 
-  periodType          PeriodType
-  year                Int
-  month               Int?
-  periodStart         DateTime
-  periodEnd           DateTime
+  periodType  PeriodType
+  year        Int
+  month       Int?
+  periodStart DateTime
+  periodEnd   DateTime
 
   /// Original reported value + currency (never converted silently).
-  tradeValue          Decimal? @db.Decimal(20, 2)
-  currency            String
-  valueBasis          String?
-  normalizedValueUsd  Decimal? @db.Decimal(20, 2)
-  fxRate              Decimal? @db.Decimal(18, 8)
-  fxRateDate          DateTime?
-  fxSource            String?
+  tradeValue         Decimal?  @db.Decimal(20, 2)
+  currency           String
+  valueBasis         String?
+  normalizedValueUsd Decimal?  @db.Decimal(20, 2)
+  fxRate             Decimal?  @db.Decimal(18, 8)
+  fxRateDate         DateTime?
+  fxSource           String?
 
-  quantity            Decimal? @db.Decimal(24, 4)
-  quantityUnit        String?
-  normalizedQuantity  Decimal? @db.Decimal(24, 4)
-  normalizedUnit      String?
-  unitMappingStatus   MappingStatus
-  netWeightKg         Decimal? @db.Decimal(24, 4)
+  quantity           Decimal?      @db.Decimal(24, 4)
+  quantityUnit       String?
+  normalizedQuantity Decimal?      @db.Decimal(24, 4)
+  normalizedUnit     String?
+  unitMappingStatus  MappingStatus
+  netWeightKg        Decimal?      @db.Decimal(24, 4)
 
-  portCode            String?
-  stateCode           String?
-  districtKey         String?
-  districtLabel       String?
+  portCode              String?
+  stateCode             String?
+  districtKey           String?
+  districtLabel         String?
   districtMappingStatus MappingStatus?
 
-  isEstimated         Boolean?
-  sourceUpdatedAt     DateTime?
-  transformVersion    String
-  ingestedAt          DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  isEstimated      Boolean?
+  sourceUpdatedAt  DateTime?
+  transformVersion String
+  ingestedAt       DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   @@index([hsCode, tradeDirection, reporterCountryCode, year])
   @@index([reporterCountryCode, partnerCountryCode, hsCode, year])
@@ -1255,20 +1261,306 @@ model TradeFact {
 
 /// Rejections, unresolved mappings and warnings — traceable per run.
 model TradeDataIssueRecord {
-  id          String   @id @default(cuid())
+  id          String                 @id @default(cuid())
   runId       String
-  run         TradeDataIngestionRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  run         TradeDataIngestionRun  @relation(fields: [runId], references: [id], onDelete: Cascade)
   sourceId    String
-  source      TradeDataSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  source      TradeDataSource        @relation(fields: [sourceId], references: [id], onDelete: Cascade)
   kind        String
   severity    TradeDataIssueSeverity
   field       String?
   sourceValue String?
   message     String
   rowRef      String?
-  createdAt   DateTime @default(now())
+  createdAt   DateTime               @default(now())
 
   @@index([runId])
   @@index([sourceId, kind])
   @@map("trade_data_issues")
+}
+
+// --- Sprint 10: buyer discovery -----------------------------------------
+
+enum BuyerType {
+  IMPORTER
+  DISTRIBUTOR
+  WHOLESALER
+  RETAILER
+  MANUFACTURER
+  AGENT
+  OTHER
+  UNKNOWN
+}
+
+enum CompanySize {
+  MICRO
+  SMALL
+  MEDIUM
+  LARGE
+  ENTERPRISE
+  UNKNOWN
+}
+
+enum ImportFrequency {
+  OCCASIONAL
+  REGULAR
+  FREQUENT
+  HIGH_FREQUENCY
+  UNKNOWN
+}
+
+enum BuyerSourceType {
+  PUBLIC_TRADE_DATA
+  GOVERNMENT
+  PUBLIC_REGISTRY
+  BUSINESS_DIRECTORY
+  COMMERCIAL_PROVIDER
+  USER_PROVIDED
+  MANUAL_IMPORT
+  DEMO
+}
+
+enum BuyerContactType {
+  EMAIL
+  PHONE
+  WHATSAPP
+  WEBSITE_FORM
+  LINKEDIN_OR_SOCIAL_REFERENCE
+  OTHER
+}
+
+enum ContactVerificationStatus {
+  UNVERIFIED
+  SOURCE_LISTED
+  FORMAT_VALID
+  DOMAIN_MATCHED
+  VERIFIED
+  INVALID
+  STALE
+}
+
+enum BuyerVerificationStatus {
+  UNVERIFIED
+  PARTIALLY_VERIFIED
+  VERIFIED_SOURCE
+  MULTI_SOURCE_VERIFIED
+  NEEDS_REVIEW
+  SUSPICIOUS
+}
+
+enum BuyerActivityType {
+  TRADE_ACTIVITY
+  BUSINESS_LISTING
+}
+
+/// Canonical company. Global (ownerOrganizationId null) when discovered
+/// from a provider; organization-private when manually entered
+/// (USER_PROVIDED). Persisted score columns are derived by the enrichment
+/// service and only used for filtering/sorting — provider facts live on
+/// source records, activity and contacts.
+model BuyerCompany {
+  id               String      @id @default(cuid())
+  canonicalName    String
+  normalizedName   String
+  countryCode      String
+  stateRegion      String?
+  city             String?
+  address          String?
+  website          String?
+  websiteDomain    String?
+  buyerType        BuyerType   @default(UNKNOWN)
+  businessCategory String?
+  companySize      CompanySize @default(UNKNOWN)
+  employeeRange    String?
+  active           Boolean     @default(true)
+  isDemo           Boolean     @default(false)
+
+  ownerOrganizationId String?
+  ownerOrganization   Organization? @relation(fields: [ownerOrganizationId], references: [id], onDelete: Cascade)
+  createdByUserId     String?
+
+  // Derived by BuyerEnrichmentService (cache).
+  verificationStatus   BuyerVerificationStatus @default(UNVERIFIED)
+  riskScore            Int                     @default(50)
+  importFrequency      ImportFrequency         @default(UNKNOWN)
+  lastActivityDate     DateTime?
+  hasContact           Boolean                 @default(false)
+  hasVerifiedContact   Boolean                 @default(false)
+  maxContactConfidence Int?
+  lastVerifiedAt       DateTime?
+  profile              Json?
+  enrichedAt           DateTime?
+  enrichmentVersion    String?
+  enrichmentExpiresAt  DateTime?
+
+  sourceRecords BuyerSourceRecord[]
+  activities    BuyerProductActivity[]
+  contacts      BuyerContact[]
+  orgStates     OrganizationBuyer[]
+  leads         BuyerLead[]
+  duplicatesA   BuyerDuplicateCandidate[] @relation("DuplicateA")
+  duplicatesB   BuyerDuplicateCandidate[] @relation("DuplicateB")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([countryCode, buyerType])
+  @@index([normalizedName, countryCode])
+  @@index([websiteDomain, countryCode])
+  @@index([verificationStatus])
+  @@index([riskScore])
+  @@index([ownerOrganizationId])
+  @@map("buyer_companies")
+}
+
+/// Source-specific identity. Never deleted when a provider stops
+/// returning a record — marked inactive and kept for lineage.
+model BuyerSourceRecord {
+  id              String           @id @default(cuid())
+  buyerCompanyId  String
+  buyerCompany    BuyerCompany     @relation(fields: [buyerCompanyId], references: [id], onDelete: Cascade)
+  sourceId        String?
+  source          TradeDataSource? @relation(fields: [sourceId], references: [id])
+  sourceType      BuyerSourceType
+  externalId      String?
+  rawName         String
+  rawCountry      String?
+  rawBuyerType    String?
+  sourceUrl       String?
+  retrievedAt     DateTime         @default(now())
+  lastSeenAt      DateTime         @default(now())
+  sourceUpdatedAt DateTime?
+  rawData         Json
+  contentHash     String
+  confidence      Int
+  active          Boolean          @default(true)
+  duplicateMatch  String?
+
+  activities BuyerProductActivity[]
+  contacts   BuyerContact[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([sourceId, externalId])
+  @@index([buyerCompanyId])
+  @@map("buyer_source_records")
+}
+
+model BuyerProductActivity {
+  id                String            @id @default(cuid())
+  buyerCompanyId    String
+  buyerCompany      BuyerCompany      @relation(fields: [buyerCompanyId], references: [id], onDelete: Cascade)
+  sourceRecordId    String
+  sourceRecord      BuyerSourceRecord @relation(fields: [sourceRecordId], references: [id], onDelete: Cascade)
+  activityType      BuyerActivityType
+  hsCode            String?
+  productName       String
+  importFrequency   ImportFrequency   @default(UNKNOWN)
+  /// Source-stated frequency term, kept verbatim.
+  rawFrequency      String?
+  transactionCount  Int?
+  importValueUsd    Decimal?          @db.Decimal(18, 2)
+  importQuantity    Decimal?          @db.Decimal(18, 3)
+  quantityUnit      String?
+  originCountries   String[]
+  periodLabel       String?
+  firstActivityDate DateTime?
+  lastActivityDate  DateTime?
+  confidence        Int
+
+  createdAt DateTime @default(now())
+
+  @@index([hsCode])
+  @@index([buyerCompanyId])
+  @@map("buyer_product_activities")
+}
+
+/// Contacts are separate from company identity. Values are stored exactly
+/// as the source lists them; nothing is guessed or inferred.
+model BuyerContact {
+  id                 String                    @id @default(cuid())
+  buyerCompanyId     String
+  buyerCompany       BuyerCompany              @relation(fields: [buyerCompanyId], references: [id], onDelete: Cascade)
+  sourceRecordId     String
+  sourceRecord       BuyerSourceRecord         @relation(fields: [sourceRecordId], references: [id], onDelete: Cascade)
+  name               String?
+  role               String?
+  contactType        BuyerContactType
+  value              String
+  /// Verification mechanism reported by the source (e.g. provider mailbox check). Required for VERIFIED.
+  verificationMethod String?
+  verificationStatus ContactVerificationStatus @default(UNVERIFIED)
+  confidence         Int                       @default(0)
+  verifiedAt         DateTime?
+  lastCheckedAt      DateTime?
+  isPrimary          Boolean                   @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([buyerCompanyId])
+  @@map("buyer_contacts")
+}
+
+/// POSSIBLE duplicates are recorded for review, never auto-merged.
+model BuyerDuplicateCandidate {
+  id         String       @id @default(cuid())
+  buyerAId   String
+  buyerA     BuyerCompany @relation("DuplicateA", fields: [buyerAId], references: [id], onDelete: Cascade)
+  buyerBId   String
+  buyerB     BuyerCompany @relation("DuplicateB", fields: [buyerBId], references: [id], onDelete: Cascade)
+  confidence String
+  reason     String
+  createdAt  DateTime     @default(now())
+
+  @@unique([buyerAId, buyerBId])
+  @@map("buyer_duplicate_candidates")
+}
+
+/// Organization-private state for a (global or private) buyer: one row per org+buyer.
+model OrganizationBuyer {
+  id                 String               @id @default(cuid())
+  organizationId     String
+  organization       Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  buyerCompanyId     String
+  buyerCompany       BuyerCompany         @relation(fields: [buyerCompanyId], references: [id], onDelete: Cascade)
+  shortlisted        Boolean              @default(false)
+  savedAt            DateTime?
+  savedByUserId      String?
+  productId          String?
+  product            OrganizationProduct? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  contextCountryCode String?
+  notes              String?
+  notesUpdatedAt     DateTime?
+  notesUpdatedById   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, buyerCompanyId])
+  @@index([organizationId, shortlisted])
+  @@map("organization_buyers")
+}
+
+/// Minimal Sprint 10 → Sprint 11 CRM handoff. No stages, owners or timeline.
+model BuyerLead {
+  id              String               @id @default(cuid())
+  organizationId  String
+  organization    Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  buyerCompanyId  String
+  buyerCompany    BuyerCompany         @relation(fields: [buyerCompanyId], references: [id], onDelete: Cascade)
+  productId       String?
+  product         OrganizationProduct? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  /// productId or "none" — makes org + buyer + product context idempotent.
+  contextKey      String
+  countryCode     String
+  source          String               @default("BUYER_DISCOVERY")
+  context         Json?
+  createdByUserId String
+  createdAt       DateTime             @default(now())
+
+  @@unique([organizationId, buyerCompanyId, contextKey])
+  @@index([organizationId])
+  @@map("buyer_leads")
 }

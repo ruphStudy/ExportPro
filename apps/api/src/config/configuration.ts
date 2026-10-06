@@ -34,6 +34,7 @@ export function buildConfiguration(env: EnvConfig) {
       comtradeImportReporters: env.COMTRADE_IMPORT_REPORTERS,
       hsReferenceUrl: env.COMTRADE_HS_REFERENCE_URL,
       adminEmails: env.TRADE_DATA_ADMIN_EMAILS,
+      gleifBaseUrl: env.GLEIF_BASE_URL,
     },
     email: {
       apiKey: env.EMAIL_PROVIDER_API_KEY,

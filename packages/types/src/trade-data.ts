@@ -50,6 +50,10 @@ export const TradeDataDomain = {
   TARIFF: "TARIFF",
   COMMODITY: "COMMODITY",
   UNIT_REFERENCE: "UNIT_REFERENCE",
+  COMPANY_IDENTITY: "COMPANY_IDENTITY",
+  BUYER_DIRECTORY: "BUYER_DIRECTORY",
+  BUYER_TRADE_ACTIVITY: "BUYER_TRADE_ACTIVITY",
+  BUYER_CONTACT: "BUYER_CONTACT",
 } as const;
 export type TradeDataDomain = (typeof TradeDataDomain)[keyof typeof TradeDataDomain];
 

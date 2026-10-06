@@ -70,6 +70,11 @@ const envSchema = z.object({
       .string()
       .default('https://comtradeapi.un.org/files/v1/app/reference/HS.json'),
   ),
+  /** GLEIF LEI API base (buyer identity checks). Fixed configuration — never user-supplied. */
+  GLEIF_BASE_URL: z.preprocess(
+    emptyToUndefined,
+    z.string().url().default('https://api.gleif.org/api/v1'),
+  ),
   /** Comma-separated emails allowed to administer GLOBAL trade-data sources (in addition to the role permission). Required in production. */
   TRADE_DATA_ADMIN_EMAILS: z.string().optional(),
 

@@ -88,8 +88,9 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Buyers & Suppliers",
     href: "/buyers",
     icon: Users,
-    status: "placeholder",
-    description: "Find and manage buyers and suppliers.",
+    status: "active",
+    permission: "buyers.view",
+    description: "Discover buyers for your products, evaluate match and risk, and shortlist them.",
   },
   {
     label: "CRM",

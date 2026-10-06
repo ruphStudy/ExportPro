@@ -23,6 +23,7 @@ import { ProvenanceBadge, SectionProvenanceList } from "@/components/provenance/
 import { CodeLabel } from "@/components/products/classification-bits";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
+import { FindBuyersButton } from "@/components/buyers/buyer-bits";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -578,6 +579,7 @@ function MarketsSection({ intel }: { intel: ProductIntelligence }) {
         <Button asChild variant="outline" className="w-fit">
           <Link href={`/compare/products?ids=${intel.product.id}`}>Compare with another product</Link>
         </Button>
+        <FindBuyersButton productId={intel.product.id} size="md" />
       </div>
     </section>
   );
