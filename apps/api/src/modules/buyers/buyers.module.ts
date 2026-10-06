@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AppConfig } from '../../config/configuration';
 import { AuditModule } from '../audit/audit.module';
+import { CrmModule } from '../crm/crm.module';
 import { TradeDataModule } from '../trade-data/trade-data.module';
 import { BuyerEnrichmentService } from './buyer-enrichment.service';
 import { BuyerSyncService } from './buyer-sync.service';
@@ -19,7 +20,7 @@ import {
 
 @Module({
   // TradeDataModule registers the buyer sources in the Sprint 9 source registry.
-  imports: [AuditModule, TradeDataModule],
+  imports: [AuditModule, TradeDataModule, CrmModule],
   controllers: [BuyersController],
   providers: [
     BuyersService,

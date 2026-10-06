@@ -3,11 +3,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, CheckCircle2, ExternalLink, Info, MinusCircle, Send } from "lucide-react";
 import Link from "next/link";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
 import { Suspense } from "react";
 import type { BuyerActivityView, BuyerDetail, ScoreReason } from "@exportpro/types";
-import { countryLabel } from "@exportpro/types";
+import { countryLabel, CRM_STAGE_LABELS } from "@exportpro/types";
 import { buyersApi, findBuyersHref } from "@/lib/api/buyers";
 import { formatMoney } from "@/lib/api/product-intelligence";
 import { toFriendlyErrorMessage } from "@/lib/api-client";
@@ -316,18 +316,30 @@ function ActivityTable({ rows, caption, trade }: { rows: BuyerActivityView[]; ca
 
 function AddToCrmButton({ b }: { b: BuyerDetail }) {
   const qc = useQueryClient();
+  const router = useRouter();
   const { data: session } = useSession();
   const m = useMutation({
     mutationFn: () => buyersApi.addToCrm(b.id, { productId: b.context.productId ?? undefined, countryCode: b.context.countryCode ?? b.countryCode }),
     onSuccess: (r) => {
-      toast.success(r.alreadyAdded ? "Already in CRM" : "Added to CRM", r.alreadyAdded ? "No duplicate lead was created." : "Lead handed off for the CRM pipeline (coming next).");
+      toast.success(r.alreadyAdded ? "Already in CRM" : "Added to CRM", r.alreadyAdded ? "No duplicate lead was created." : "The lead is now in the CRM pipeline as New.");
       qc.invalidateQueries({ queryKey: ["buyers"] });
+      qc.invalidateQueries({ queryKey: ["crm"] });
+      if (!r.alreadyAdded && hasPermission(session, "crm.view")) router.push(`/crm/leads/${r.leadId}`);
     },
     onError: (e) => toast.error("Could not add to CRM", toFriendlyErrorMessage(e)),
   });
+  const lead = b.orgState.lead;
+  // Current organization's lead only (the API never returns another tenant's CRM state).
+  if (lead && (lead.productId ?? null) === (b.context.productId ?? null))
+    return (
+      <div className="flex flex-wrap items-center gap-2" role="status">
+        <Badge variant="success" className="h-9 px-3 text-sm">In CRM · {CRM_STAGE_LABELS[lead.stage]}{lead.ownerName ? ` · ${lead.ownerName}` : " · Unassigned"}</Badge>
+        {hasPermission(session, "crm.view") && (
+          <Button variant="outline" asChild><Link href={`/crm/leads/${lead.id}`}>View CRM lead</Link></Button>
+        )}
+      </div>
+    );
   if (!hasPermission(session, "buyers.crm_handoff")) return null;
-  if (b.orgState.lead && (b.orgState.lead.productId ?? null) === (b.context.productId ?? null))
-    return <Badge variant="success" className="h-9 px-3 text-sm" role="status">Added to CRM · {fmtDate(b.orgState.lead.createdAt)}</Badge>;
   return (
     <Button onClick={() => m.mutate()} disabled={m.isPending}>
       <Send className="size-4" aria-hidden="true" />

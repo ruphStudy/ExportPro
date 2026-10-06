@@ -22,10 +22,12 @@ import {
   type SavedBuyersResponse,
   type SourceQualityTier,
   isValidCountryCode,
+  type MembershipRole,
 } from '@exportpro/types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { buildPaginationMeta } from '../../common/utils/pagination.util';
 import { AuditService } from '../audit/audit.service';
+import { CrmService } from '../crm/crm.service';
 import { FRESHNESS_SCORE } from '../trade-data/reliability';
 import {
   analyzeEmail,
@@ -87,6 +89,9 @@ const buyerInclude = {
 } satisfies Prisma.BuyerCompanyInclude;
 type BuyerRow = Prisma.BuyerCompanyGetPayload<{ include: typeof buyerInclude }>;
 type Actor = { organizationId: string; userId: string };
+const leadOwner = {
+  owner: { select: { firstName: true, lastName: true } },
+} satisfies Prisma.BuyerLeadInclude;
 
 @Injectable()
 export class BuyersService {
@@ -95,6 +100,7 @@ export class BuyersService {
     private readonly enrichment: BuyerEnrichmentService,
     private readonly sync: BuyerSyncService,
     private readonly audit: AuditService,
+    private readonly crm: CrmService,
   ) {}
 
   // ----------------------------------------------------------- context
@@ -520,7 +526,9 @@ export class BuyersService {
     );
     const firstSrc = (sid: string | undefined) =>
       sid ? buyerSourceProvenance(srcById.get(sid)!) : null;
-    const [state] = [await this.orgState(organizationId, id)];
+    const [state] = [
+      await this.orgState(organizationId, id, context.productId),
+    ];
     const dupes = [
       ...b.duplicatesA.map((d) => ({ other: d.buyerB, reason: d.reason })),
       ...b.duplicatesB.map((d) => ({ other: d.buyerA, reason: d.reason })),
@@ -622,18 +630,25 @@ export class BuyersService {
   private async orgState(
     organizationId: string,
     buyerCompanyId: string,
+    productId?: string | null,
   ): Promise<BuyerOrgState> {
-    const [s, lead] = await Promise.all([
+    const [s, leads] = await Promise.all([
       this.prisma.organizationBuyer.findUnique({
         where: {
           organizationId_buyerCompanyId: { organizationId, buyerCompanyId },
         },
       }),
-      this.prisma.buyerLead.findFirst({
+      // Current organization's CRM leads only — never another tenant's.
+      this.prisma.buyerLead.findMany({
         where: { organizationId, buyerCompanyId },
+        include: leadOwner,
         orderBy: { createdAt: 'asc' },
       }),
     ]);
+    const lead =
+      leads.find((l) => l.productId === (productId ?? null)) ??
+      leads[0] ??
+      null;
     return {
       shortlisted: Boolean(s?.shortlisted),
       savedAt: s?.shortlisted ? (s.savedAt?.toISOString() ?? null) : null,
@@ -643,17 +658,18 @@ export class BuyersService {
     };
   }
 
-  private leadView(l: {
-    id: string;
-    productId: string | null;
-    countryCode: string;
-    createdAt: Date;
-  }): BuyerLeadView {
+  private leadView(
+    l: Prisma.BuyerLeadGetPayload<{ include: typeof leadOwner }>,
+  ): BuyerLeadView {
     return {
       id: l.id,
       productId: l.productId,
       countryCode: l.countryCode,
       createdAt: l.createdAt.toISOString(),
+      stage: l.stage,
+      ownerName: l.owner
+        ? `${l.owner.firstName} ${l.owner.lastName}`.trim()
+        : null,
     };
   }
 
@@ -694,6 +710,7 @@ export class BuyersService {
       this.states(organizationId, ids),
       this.prisma.buyerLead.findMany({
         where: { organizationId, buyerCompanyId: { in: ids } },
+        include: leadOwner,
         orderBy: { createdAt: 'asc' },
       }),
       this.prisma.user.findMany({
@@ -851,72 +868,30 @@ export class BuyersService {
     return this.orgState(a.organizationId, id);
   }
 
-  /** Minimal, idempotent Sprint 11 handoff: one lead per organization + buyer + product context. */
+  /**
+   * Buyer Discovery → CRM handoff. Same contract as Sprint 10 (idempotent per
+   * organization + buyer + product context); the lead now enters the
+   * Sprint 11 pipeline as NEW via the single CRM creation path.
+   */
   async addToCrm(
-    a: Actor,
+    a: Actor & { role: MembershipRole },
     id: string,
     dto: AddToCrmDto,
   ): Promise<AddToCrmResult> {
-    const buyer = await this.findVisible(a.organizationId, id);
-    const productId = await this.assertProduct(a.organizationId, dto.productId);
-    if (dto.countryCode && !isValidCountryCode(dto.countryCode))
-      throw new BadRequestException('This country is not supported yet.');
-    const contextKey = productId ?? 'none';
-    const where = {
-      organizationId_buyerCompanyId_contextKey: {
-        organizationId: a.organizationId,
+    const { lead, alreadyExists } = await this.crm.createLead(
+      a,
+      {
         buyerCompanyId: id,
-        contextKey,
+        productId: dto.productId,
+        countryCode: dto.countryCode,
       },
+      { source: 'BUYER_DISCOVERY', contextNote: dto.context },
+    );
+    return {
+      leadId: lead.id,
+      alreadyAdded: alreadyExists,
+      createdAt: lead.createdAt.toISOString(),
     };
-    const existing = await this.prisma.buyerLead.findUnique({ where });
-    if (existing)
-      return {
-        leadId: existing.id,
-        alreadyAdded: true,
-        createdAt: existing.createdAt.toISOString(),
-      };
-    try {
-      const lead = await this.prisma.buyerLead.create({
-        data: {
-          organizationId: a.organizationId,
-          buyerCompanyId: id,
-          productId,
-          contextKey,
-          countryCode: dto.countryCode ?? buyer.countryCode,
-          context: dto.context
-            ? { note: sanitizeText(dto.context, 200) }
-            : undefined,
-          createdByUserId: a.userId,
-        },
-      });
-      await this.audit.record({
-        organizationId: a.organizationId,
-        actorId: a.userId,
-        action: 'buyer.added_to_crm',
-        entityType: 'BuyerLead',
-        entityId: lead.id,
-        metadata: { buyerCompanyId: id, productId },
-      });
-      return {
-        leadId: lead.id,
-        alreadyAdded: false,
-        createdAt: lead.createdAt.toISOString(),
-      };
-    } catch (e) {
-      if (
-        e instanceof Prisma.PrismaClientKnownRequestError &&
-        e.code === 'P2002'
-      ) {
-        const l = await this.prisma.buyerLead.findUniqueOrThrow({ where });
-        return {
-          leadId: l.id,
-          alreadyAdded: true,
-          createdAt: l.createdAt.toISOString(),
-        };
-      }
-      throw e;
-    }
   }
 
   // ------------------------------------------------------ manual entry

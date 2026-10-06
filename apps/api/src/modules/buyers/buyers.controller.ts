@@ -102,6 +102,10 @@ export class BuyersController {
     @Param('id') id: string,
     @Body() dto: AddToCrmDto,
   ) {
-    return this.buyers.addToCrm(this.actor(req), id, dto);
+    return this.buyers.addToCrm(
+      { ...this.actor(req), role: req.membershipRole! },
+      id,
+      dto,
+    );
   }
 }

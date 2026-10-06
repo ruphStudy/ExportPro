@@ -376,6 +376,8 @@ model User {
   createdSavedSearches SavedOpportunitySearch[]
   productAnalyses      ProductAnalysis[]
   confirmedProducts    OrganizationProduct[]    @relation("ProductConfirmedBy")
+  ownedLeads           BuyerLead[]              @relation("LeadOwner")
+  assignedLeadTasks    LeadTask[]               @relation("LeadTaskAssignee")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -497,6 +499,7 @@ model Organization {
   privateBuyers       BuyerCompany[]
   buyerStates         OrganizationBuyer[]
   buyerLeads          BuyerLead[]
+  leadTags            LeadTag[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1543,7 +1546,8 @@ model OrganizationBuyer {
   @@map("organization_buyers")
 }
 
-/// Minimal Sprint 10 → Sprint 11 CRM handoff. No stages, owners or timeline.
+/// Sprint 10 CRM handoff, extended in Sprint 11 into the organization CRM
+/// lead. One lead per organization + buyer + product context (contextKey).
 model BuyerLead {
   id              String               @id @default(cuid())
   organizationId  String
@@ -1555,12 +1559,279 @@ model BuyerLead {
   /// productId or "none" — makes org + buyer + product context idempotent.
   contextKey      String
   countryCode     String
+  /// LeadSource value (BUYER_DISCOVERY, MANUAL, OPPORTUNITY, RECOMMENDATION, OTHER).
   source          String               @default("BUYER_DISCOVERY")
   context         Json?
   createdByUserId String
   createdAt       DateTime             @default(now())
 
+  // --- Sprint 11 CRM ---
+  stage            CrmStage     @default(NEW)
+  priority         LeadPriority @default(MEDIUM)
+  ownerUserId      String?
+  owner            User?        @relation("LeadOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
+  expectedValue    Decimal?     @db.Decimal(18, 2)
+  currency         String?
+  nextAction       String?
+  nextActionDueAt  DateTime?
+  /// Last engagement activity (see ENGAGEMENT_ACTIVITY_TYPES); drives stale detection.
+  lastActivityAt   DateTime     @default(now())
+  stageChangedAt   DateTime     @default(now())
+  wonAt            DateTime?
+  wonReason        String?
+  lostAt           DateTime?
+  lostReason       LostReason?
+  lostDetails      String?
+  primaryContactId String?
+  qualification    Json?
+  /// Optimistic-concurrency counter, incremented on every lead mutation.
+  version          Int          @default(0)
+  updatedAt        DateTime     @default(now()) @updatedAt
+
+  stageHistory LeadStageHistory[]
+  activities   LeadActivity[]
+  tasks        LeadTask[]
+  reminders    LeadReminder[]
+  comments     LeadComment[]
+  tags         LeadTagAssignment[]
+  attachments  LeadAttachment[]
+
   @@unique([organizationId, buyerCompanyId, contextKey])
   @@index([organizationId])
+  @@index([organizationId, stage])
+  @@index([organizationId, ownerUserId])
+  @@index([organizationId, nextActionDueAt])
+  @@index([organizationId, lastActivityAt])
+  @@index([organizationId, updatedAt])
   @@map("buyer_leads")
+}
+
+// --- Sprint 11: CRM & lead management -----------------------------------
+
+enum CrmStage {
+  NEW
+  CONTACTED
+  REPLIED
+  INTERESTED
+  QUALIFIED
+  QUOTATION
+  NEGOTIATION
+  SAMPLE
+  PO
+  SHIPMENT
+  WON
+  LOST
+}
+
+enum LeadPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum LostReason {
+  PRICE
+  COMPETITOR
+  NO_RESPONSE
+  PRODUCT_FIT
+  PAYMENT_TERMS
+  DELIVERY
+  COMPLIANCE
+  BUYER_CANCELLED
+  OTHER
+}
+
+enum LeadActivityType {
+  NOTE
+  EMAIL
+  CALL
+  MEETING
+  STAGE_CHANGE
+  TASK
+  COMMENT
+  ATTACHMENT
+  SYSTEM
+  OTHER
+}
+
+enum ActivityDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum LeadTaskStatus {
+  OPEN
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+enum LeadReminderType {
+  FOLLOW_UP
+  TASK
+  NEXT_ACTION
+  CUSTOM
+}
+
+enum LeadReminderStatus {
+  PENDING
+  TRIGGERED
+  DISMISSED
+  CANCELLED
+}
+
+/// Append-only. Rows are never updated or deleted (reopen adds a new row).
+model LeadStageHistory {
+  id              String    @id @default(cuid())
+  organizationId  String
+  leadId          String
+  lead            BuyerLead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  fromStage       CrmStage?
+  toStage         CrmStage
+  changedByUserId String?
+  changedAt       DateTime  @default(now())
+  reason          String?
+  /// Won/lost details at the time of the change (lostReason, value…).
+  metadata        Json?
+
+  @@index([leadId, changedAt])
+  @@index([organizationId, toStage, changedAt])
+  @@map("lead_stage_history")
+}
+
+/// Business collaboration timeline (not the security audit log).
+model LeadActivity {
+  id              String             @id @default(cuid())
+  organizationId  String
+  leadId          String
+  lead            BuyerLead          @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  type            LeadActivityType
+  title           String
+  body            String?
+  direction       ActivityDirection?
+  occurredAt      DateTime           @default(now())
+  contactId       String?
+  outcome         String?
+  durationMinutes Int?
+  location        String?
+  metadata        Json?
+  actorUserId     String?
+  createdAt       DateTime           @default(now())
+
+  @@index([leadId, occurredAt])
+  @@map("lead_activities")
+}
+
+model LeadTask {
+  id               String         @id @default(cuid())
+  organizationId   String
+  leadId           String
+  lead             BuyerLead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  title            String
+  description      String?
+  assignedToUserId String?
+  assignedTo       User?          @relation("LeadTaskAssignee", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  dueAt            DateTime?
+  priority         LeadPriority   @default(MEDIUM)
+  status           LeadTaskStatus @default(OPEN)
+  completedAt      DateTime?
+  createdByUserId  String
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  reminders LeadReminder[]
+
+  @@index([leadId])
+  @@index([organizationId, status, dueAt])
+  @@index([organizationId, assignedToUserId, status])
+  @@map("lead_tasks")
+}
+
+/// CRM-local reminder. No scheduler: PENDING rows past remindAt are
+/// flipped to TRIGGERED when CRM attention/detail queries read them.
+model LeadReminder {
+  id              String             @id @default(cuid())
+  organizationId  String
+  leadId          String
+  lead            BuyerLead          @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  taskId          String?
+  task            LeadTask?          @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId          String
+  remindAt        DateTime
+  type            LeadReminderType   @default(FOLLOW_UP)
+  status          LeadReminderStatus @default(PENDING)
+  message         String
+  triggeredAt     DateTime?
+  dismissedAt     DateTime?
+  createdByUserId String
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@index([leadId])
+  @@index([organizationId, userId, status, remindAt])
+  @@map("lead_reminders")
+}
+
+model LeadComment {
+  id               String    @id @default(cuid())
+  organizationId   String
+  leadId           String
+  lead             BuyerLead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  authorUserId     String?
+  body             String
+  /// Resolved active org members mentioned with @Name.
+  mentionedUserIds String[]
+  createdAt        DateTime  @default(now())
+  editedAt         DateTime?
+
+  @@index([leadId, createdAt])
+  @@index([organizationId])
+  @@map("lead_comments")
+}
+
+/// Organization-specific tag vocabulary — never shared across tenants.
+model LeadTag {
+  id             String              @id @default(cuid())
+  organizationId String
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  normalizedName String
+  color          String?
+  createdAt      DateTime            @default(now())
+  assignments    LeadTagAssignment[]
+
+  @@unique([organizationId, normalizedName])
+  @@map("lead_tags")
+}
+
+model LeadTagAssignment {
+  leadId         String
+  lead           BuyerLead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  tagId          String
+  tag            LeadTag   @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  organizationId String
+  createdAt      DateTime  @default(now())
+
+  @@id([leadId, tagId])
+  @@index([tagId])
+  @@map("lead_tag_assignments")
+}
+
+/// Metadata only; file bytes live in private storage under an opaque key.
+model LeadAttachment {
+  id               String    @id @default(cuid())
+  organizationId   String
+  leadId           String
+  lead             BuyerLead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  originalFilename String
+  storageKey       String
+  mimeType         String
+  sizeBytes        Int
+  uploadedByUserId String?
+  createdAt        DateTime  @default(now())
+  deletedAt        DateTime?
+
+  @@index([leadId])
+  @@map("lead_attachments")
 }

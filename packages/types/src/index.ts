@@ -14,3 +14,4 @@ export * from "./country-intelligence";
 export * from "./comparisons";
 export * from "./trade-data";
 export * from "./buyers";
+export * from "./crm";

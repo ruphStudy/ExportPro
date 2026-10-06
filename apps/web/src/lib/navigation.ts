@@ -96,8 +96,9 @@ export const NAV_ITEMS: NavItem[] = [
     label: "CRM",
     href: "/crm",
     icon: Contact,
-    status: "placeholder",
-    description: "Track relationships and outreach.",
+    status: "active",
+    permission: "crm.view",
+    description: "Lead pipeline, follow-ups, tasks and collaboration for your buyers.",
   },
   {
     label: "Inquiries & RFQs",

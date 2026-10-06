@@ -261,6 +261,9 @@ export interface BuyerLeadView {
   productId: string | null;
   countryCode: string;
   createdAt: string;
+  /** Sprint 11 CRM state for the current organization only. */
+  stage: import("./crm").CrmStage;
+  ownerName: string | null;
 }
 
 export interface BuyerSearchResult {

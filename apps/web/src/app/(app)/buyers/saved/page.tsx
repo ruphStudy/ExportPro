@@ -5,7 +5,7 @@ import { Bookmark } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 import type { SavedBuyerItem } from "@exportpro/types";
-import { countryLabel } from "@exportpro/types";
+import { countryLabel, CRM_STAGE_LABELS } from "@exportpro/types";
 import { buyersApi } from "@/lib/api/buyers";
 import { toFriendlyErrorMessage } from "@/lib/api-client";
 import { BUYER_TYPE_LABELS, matchLabel } from "@/lib/buyer-labels";
@@ -55,7 +55,7 @@ function SavedBuyers() {
     { key: "risk", header: "Risk", render: (i) => <div className="flex flex-col gap-1"><RiskBadge risk={i.buyer.risk} /><VerificationBadge status={i.buyer.verificationStatus} /></div> },
     { key: "contacts", header: "Contacts", render: (i) => (i.contactCount ? `${i.contactCount}${i.buyer.contactAvailability === "VERIFIED" ? " (verified)" : ""}` : <span className="text-muted-foreground">None</span>) },
     { key: "saved", header: "Saved", render: (i) => <div className="flex flex-col"><span>{fmtDate(i.savedAt)}</span>{i.savedBy && <Caption>by {i.savedBy}</Caption>}</div> },
-    { key: "crm", header: "CRM", render: (i) => (i.lead ? <Badge variant="success">Added to CRM</Badge> : <Caption>Not added</Caption>) },
+    { key: "crm", header: "CRM", render: (i) => (i.lead ? <Link href={`/crm/leads/${i.lead.id}`} className="inline-flex"><Badge variant="success">In CRM · {CRM_STAGE_LABELS[i.lead.stage]}</Badge></Link> : <Caption>Not added</Caption>) },
     { key: "actions", header: "Actions", render: (i) => <SaveBuyerButton buyerId={i.buyer.id} shortlisted /> },
   ];
 
