@@ -14,6 +14,8 @@ import { AuthModule } from './modules/auth/auth.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
 import { MembersModule } from './modules/members/members.module';
 import { ProfileModule } from './modules/profile/profile.module';
+import { ReferenceModule } from './modules/reference/reference.module';
+import { ExportOnboardingModule } from './modules/export-onboarding/export-onboarding.module';
 import { DevModule } from './modules/dev/dev.module';
 
 /**
@@ -37,6 +39,8 @@ import { DevModule } from './modules/dev/dev.module';
     OrganizationsModule,
     MembersModule,
     ProfileModule,
+    ReferenceModule,
+    ExportOnboardingModule,
     // Dev-only mailbox for reading OTP/reset emails without a real mail provider.
     ...(process.env.NODE_ENV === 'production' ? [] : [DevModule]),
   ],

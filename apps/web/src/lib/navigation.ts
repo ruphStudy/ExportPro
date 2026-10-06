@@ -1,6 +1,7 @@
 import {
   BarChart3,
   Calculator,
+  ClipboardCheck,
   Contact,
   FileText,
   Globe2,
@@ -39,6 +40,14 @@ export const NAV_ITEMS: NavItem[] = [
     icon: LayoutDashboard,
     status: "active",
     description: "Foundation overview of your workspace.",
+  },
+  {
+    label: "Export Setup",
+    href: "/export-setup",
+    icon: ClipboardCheck,
+    status: "active",
+    permission: "onboarding.view",
+    description: "Exporter profile, products, markets, registrations, and readiness.",
   },
   {
     label: "Opportunities",

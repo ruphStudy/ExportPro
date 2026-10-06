@@ -1,6 +1,8 @@
 // Prisma schema — Sprint 1 (tenancy/audit foundation) + Sprint 2
-// (authentication, sessions, organization identity, invitations).
-// Business-domain models (products, opportunities, buyers, CRM, etc.)
+// (authentication, sessions, organization identity, invitations) +
+// Sprint 3 (exporter onboarding, preferences, registrations,
+// certifications, documents, readiness scoring).
+// Business-domain models (opportunities, buyers, CRM, costing, etc.)
 // are intentionally NOT created yet — see ARCHITECTURE.md.
 
 generator client {
@@ -49,6 +51,129 @@ enum BusinessType {
 
 enum VerificationPurpose {
   EMAIL_VERIFICATION
+}
+
+// --- Sprint 3: exporter onboarding -----------------------------------
+
+enum OnboardingStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum ExportExperience {
+  NONE
+  LESS_THAN_1_YEAR
+  ONE_TO_THREE_YEARS
+  THREE_TO_FIVE_YEARS
+  FIVE_TO_TEN_YEARS
+  TEN_PLUS_YEARS
+}
+
+enum RiskTolerance {
+  CONSERVATIVE
+  BALANCED
+  AGGRESSIVE
+}
+
+enum InvestmentRange {
+  UNDER_1L
+  L1_5
+  L5_10
+  L10_25
+  L25_50
+  L50_1CR
+  ABOVE_1CR
+}
+
+enum ShipmentPreference {
+  SAMPLES_ONLY
+  COURIER_PARCEL
+  UNDER_100KG
+  KG_100_500
+  KG_500_1MT
+  MT_1_5
+  MT_5_20
+  CONTAINER_SCALE
+  FLEXIBLE
+}
+
+enum LogisticsMode {
+  SEA
+  AIR
+  COURIER
+  ROAD
+  FLEXIBLE
+}
+
+enum ExportGoal {
+  FIND_FIRST_PRODUCT
+  START_EXPORTING_EXISTING
+  FIND_BUYERS
+  EXPAND_COUNTRIES
+  INCREASE_REVENUE
+  IMPROVE_PROFITABILITY
+  REDUCE_RISK
+  AUTOMATE_OPERATIONS
+  BUILD_REPEAT_BUSINESS
+}
+
+enum ProductInterestType {
+  CURRENT
+  INTERESTED
+}
+
+enum CountryRelation {
+  CURRENT
+  INTERESTED
+}
+
+/// IEC/GST/FSSAI/APEDA share one model — see ARCHITECTURE.md
+/// "Registrations" — rather than four near-identical tables.
+enum RegistrationType {
+  IEC
+  GST
+  FSSAI
+  APEDA
+}
+
+/// Deliberately unified across all four registration types even though
+/// their real-world wording differs slightly (e.g. GST's "not
+/// applicable" vs FSSAI's "required but not available") — the UI maps
+/// type-specific copy onto these five states.
+enum RegistrationStatus {
+  NOT_APPLICABLE
+  NOT_APPLIED
+  APPLIED_PENDING
+  AVAILABLE
+  NOT_SURE
+}
+
+/// Deliberately conservative — see ARCHITECTURE.md "No Fake Government
+/// Verification". VERIFIED must never be set just because a number was
+/// typed in or a file was uploaded; nothing in Sprint 3 sets it.
+enum VerificationStatus {
+  NOT_PROVIDED
+  USER_DECLARED
+  FORMAT_VALID
+  DOCUMENT_UPLOADED
+  PENDING_REVIEW
+  VERIFIED
+  REJECTED
+}
+
+enum CertificationStatus {
+  ACTIVE
+  EXPIRED
+  PENDING
+}
+
+enum OnboardingDocumentType {
+  IEC
+  GST
+  FSSAI
+  APEDA
+  CERTIFICATE
 }
 
 /// A person who can sign in. Identity is global; all tenant-scoped data
@@ -182,6 +307,13 @@ model Organization {
   auditLogs     AuditLog[]
   invitations   OrganizationInvitation[]
 
+  exporterProfile   ExporterProfile?
+  productInterests  ProductInterest[]
+  targetCountries   TargetCountry[]
+  registrations     Registration[]
+  certifications    Certification[]
+  onboardingDocuments OnboardingDocument[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -258,4 +390,179 @@ model AuditLog {
 
   @@index([organizationId, entityType, entityId])
   @@map("audit_logs")
+}
+
+// --- Sprint 3: exporter onboarding -----------------------------------
+
+/// One row per organization (enforced by the unique FK). Holds the
+/// onboarding wizard's progress plus the business/commercial-preference
+/// fields that don't warrant their own table. Lists of things (product
+/// interests, countries, registrations, certifications) live in their
+/// own models below — see ARCHITECTURE.md "Sprint 3 Data Model".
+model ExporterProfile {
+  id             String @id @default(cuid())
+
+  organizationId String       @unique
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  /// Restricted at the DTO layer to MANUFACTURER / MERCHANT_EXPORTER /
+  /// TRADER — reuses Organization's BusinessType enum rather than a
+  /// second, conflicting taxonomy (see ARCHITECTURE.md "Exporter Type").
+  exporterType     BusinessType?
+  exportExperience ExportExperience?
+  riskTolerance    RiskTolerance?
+
+  onboardingStatus OnboardingStatus @default(NOT_STARTED)
+  currentStep      Int              @default(1)
+  startedAt        DateTime?
+  completedAt      DateTime?
+
+  /// Codes into the shared PRODUCT_CATEGORIES / PREFERRED_INDUSTRIES
+  /// config lists (@exportpro/types) — a stable, code-defined taxonomy
+  /// rather than a database table, since the list itself rarely changes
+  /// independently of a deploy. See ARCHITECTURE.md "Reference Data".
+  productCategories  String[] @default([])
+  preferredIndustries String[] @default([])
+
+  investmentRange    InvestmentRange?
+  desiredMarginMin   Int?
+  desiredMarginMax   Int?
+  shipmentPreference ShipmentPreference?
+  preferredLogistics LogisticsMode[]     @default([])
+  exportGoals        ExportGoal[]        @default([])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("exporter_profiles")
+}
+
+/// A product the org currently sells/manufactures or wants to explore.
+/// Free-text + an optional category code — no HS classification here,
+/// that is explicitly Sprint 4/5 (see ARCHITECTURE.md).
+model ProductInterest {
+  id             String       @id @default(cuid())
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  name         String
+  category     String?
+  interestType ProductInterestType @default(INTERESTED)
+  notes        String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@map("product_interests")
+}
+
+/// A country the org exports to or is interested in. `countryCode` is
+/// ISO 3166-1 alpha-2, validated against the shared COUNTRIES list
+/// rather than stored as a free-text name.
+model TargetCountry {
+  id             String       @id @default(cuid())
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  countryCode String
+  relation    CountryRelation @default(INTERESTED)
+
+  createdAt DateTime @default(now())
+
+  @@unique([organizationId, countryCode])
+  @@index([organizationId])
+  @@map("target_countries")
+}
+
+/// IEC / GST / FSSAI / APEDA — one row per type per org. See
+/// ARCHITECTURE.md "No Fake Government Verification": `verificationStatus`
+/// is never set to VERIFIED by anything in this sprint.
+model Registration {
+  id             String       @id @default(cuid())
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  type               RegistrationType
+  status             RegistrationStatus @default(NOT_SURE)
+  number             String?
+  verificationStatus VerificationStatus @default(NOT_PROVIDED)
+  issueDate          DateTime?
+  expiryDate         DateTime?
+  metadata           Json?              @default("{}")
+
+  documents OnboardingDocument[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, type])
+  @@index([organizationId])
+  @@map("registrations")
+}
+
+/// Lightweight onboarding-level certificate record (ISO, HACCP, Organic,
+/// APEDA-adjacent certificates, custom, ...). Deliberately not the full
+/// Document Vault from a later sprint — see ARCHITECTURE.md.
+model Certification {
+  id             String       @id @default(cuid())
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  /// Free-text code (e.g. "ISO", "HACCP", "CUSTOM") rather than a Prisma
+  /// enum — the list is explicitly meant to be extensible without a migration.
+  type   String
+  name   String
+  number String?
+  issuer String?
+
+  issueDate  DateTime?
+  expiryDate DateTime?
+
+  status             CertificationStatus @default(ACTIVE)
+  verificationStatus VerificationStatus  @default(USER_DECLARED)
+  notes              String?
+
+  documents OnboardingDocument[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@map("certifications")
+}
+
+/// Upload metadata only — the file itself lives in StorageService
+/// (local disk in development; see Sprint 2). Kept separate from
+/// Registration/Certification so a future Document Vault can adopt this
+/// table (or migrate from it) without reshaping those two.
+model OnboardingDocument {
+  id             String       @id @default(cuid())
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  documentType OnboardingDocumentType
+
+  registrationId  String?
+  registration    Registration?  @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  certificationId String?
+  certification   Certification? @relation(fields: [certificationId], references: [id], onDelete: Cascade)
+
+  originalFilename String
+  storageUrl       String
+  mimeType         String
+  sizeBytes        Int
+
+  uploadedById String
+  uploadedAt   DateTime @default(now())
+
+  @@index([organizationId])
+  @@index([registrationId])
+  @@index([certificationId])
+  @@map("onboarding_documents")
 }

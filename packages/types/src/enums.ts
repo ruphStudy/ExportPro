@@ -57,3 +57,143 @@ export const TradeEntityKind = {
   BUYER: "BUYER",
 } as const;
 export type TradeEntityKind = (typeof TradeEntityKind)[keyof typeof TradeEntityKind];
+
+// --- Sprint 3: exporter onboarding -----------------------------------
+
+export const OnboardingStatus = {
+  NOT_STARTED: "NOT_STARTED",
+  IN_PROGRESS: "IN_PROGRESS",
+  COMPLETED: "COMPLETED",
+} as const;
+export type OnboardingStatus = (typeof OnboardingStatus)[keyof typeof OnboardingStatus];
+
+export const ExportExperience = {
+  NONE: "NONE",
+  LESS_THAN_1_YEAR: "LESS_THAN_1_YEAR",
+  ONE_TO_THREE_YEARS: "ONE_TO_THREE_YEARS",
+  THREE_TO_FIVE_YEARS: "THREE_TO_FIVE_YEARS",
+  FIVE_TO_TEN_YEARS: "FIVE_TO_TEN_YEARS",
+  TEN_PLUS_YEARS: "TEN_PLUS_YEARS",
+} as const;
+export type ExportExperience = (typeof ExportExperience)[keyof typeof ExportExperience];
+
+export const RiskTolerance = {
+  CONSERVATIVE: "CONSERVATIVE",
+  BALANCED: "BALANCED",
+  AGGRESSIVE: "AGGRESSIVE",
+} as const;
+export type RiskTolerance = (typeof RiskTolerance)[keyof typeof RiskTolerance];
+
+export const InvestmentRange = {
+  UNDER_1L: "UNDER_1L",
+  L1_5: "L1_5",
+  L5_10: "L5_10",
+  L10_25: "L10_25",
+  L25_50: "L25_50",
+  L50_1CR: "L50_1CR",
+  ABOVE_1CR: "ABOVE_1CR",
+} as const;
+export type InvestmentRange = (typeof InvestmentRange)[keyof typeof InvestmentRange];
+
+export const ShipmentPreference = {
+  SAMPLES_ONLY: "SAMPLES_ONLY",
+  COURIER_PARCEL: "COURIER_PARCEL",
+  UNDER_100KG: "UNDER_100KG",
+  KG_100_500: "KG_100_500",
+  KG_500_1MT: "KG_500_1MT",
+  MT_1_5: "MT_1_5",
+  MT_5_20: "MT_5_20",
+  CONTAINER_SCALE: "CONTAINER_SCALE",
+  FLEXIBLE: "FLEXIBLE",
+} as const;
+export type ShipmentPreference = (typeof ShipmentPreference)[keyof typeof ShipmentPreference];
+
+export const LogisticsMode = {
+  SEA: "SEA",
+  AIR: "AIR",
+  COURIER: "COURIER",
+  ROAD: "ROAD",
+  FLEXIBLE: "FLEXIBLE",
+} as const;
+export type LogisticsMode = (typeof LogisticsMode)[keyof typeof LogisticsMode];
+
+export const ExportGoal = {
+  FIND_FIRST_PRODUCT: "FIND_FIRST_PRODUCT",
+  START_EXPORTING_EXISTING: "START_EXPORTING_EXISTING",
+  FIND_BUYERS: "FIND_BUYERS",
+  EXPAND_COUNTRIES: "EXPAND_COUNTRIES",
+  INCREASE_REVENUE: "INCREASE_REVENUE",
+  IMPROVE_PROFITABILITY: "IMPROVE_PROFITABILITY",
+  REDUCE_RISK: "REDUCE_RISK",
+  AUTOMATE_OPERATIONS: "AUTOMATE_OPERATIONS",
+  BUILD_REPEAT_BUSINESS: "BUILD_REPEAT_BUSINESS",
+} as const;
+export type ExportGoal = (typeof ExportGoal)[keyof typeof ExportGoal];
+
+export const ProductInterestType = {
+  CURRENT: "CURRENT",
+  INTERESTED: "INTERESTED",
+} as const;
+export type ProductInterestType = (typeof ProductInterestType)[keyof typeof ProductInterestType];
+
+export const CountryRelation = {
+  CURRENT: "CURRENT",
+  INTERESTED: "INTERESTED",
+} as const;
+export type CountryRelation = (typeof CountryRelation)[keyof typeof CountryRelation];
+
+/** IEC / GST / FSSAI / APEDA share one model — see ARCHITECTURE.md "Registrations". */
+export const RegistrationType = {
+  IEC: "IEC",
+  GST: "GST",
+  FSSAI: "FSSAI",
+  APEDA: "APEDA",
+} as const;
+export type RegistrationType = (typeof RegistrationType)[keyof typeof RegistrationType];
+
+export const RegistrationStatus = {
+  NOT_APPLICABLE: "NOT_APPLICABLE",
+  NOT_APPLIED: "NOT_APPLIED",
+  APPLIED_PENDING: "APPLIED_PENDING",
+  AVAILABLE: "AVAILABLE",
+  NOT_SURE: "NOT_SURE",
+} as const;
+export type RegistrationStatus = (typeof RegistrationStatus)[keyof typeof RegistrationStatus];
+
+/**
+ * Deliberately conservative — see ARCHITECTURE.md "No Fake Government
+ * Verification". VERIFIED is never set by anything in Sprint 3; it
+ * exists only so the type is ready for a real verification integration later.
+ */
+export const VerificationStatus = {
+  NOT_PROVIDED: "NOT_PROVIDED",
+  USER_DECLARED: "USER_DECLARED",
+  FORMAT_VALID: "FORMAT_VALID",
+  DOCUMENT_UPLOADED: "DOCUMENT_UPLOADED",
+  PENDING_REVIEW: "PENDING_REVIEW",
+  VERIFIED: "VERIFIED",
+  REJECTED: "REJECTED",
+} as const;
+export type VerificationStatus = (typeof VerificationStatus)[keyof typeof VerificationStatus];
+
+export const CertificationStatus = {
+  ACTIVE: "ACTIVE",
+  EXPIRED: "EXPIRED",
+  PENDING: "PENDING",
+} as const;
+export type CertificationStatus = (typeof CertificationStatus)[keyof typeof CertificationStatus];
+
+export const OnboardingDocumentType = {
+  IEC: "IEC",
+  GST: "GST",
+  FSSAI: "FSSAI",
+  APEDA: "APEDA",
+  CERTIFICATE: "CERTIFICATE",
+} as const;
+export type OnboardingDocumentType = (typeof OnboardingDocumentType)[keyof typeof OnboardingDocumentType];
+
+/** Where a readiness-relevant value came from — see ARCHITECTURE.md "Future Data Transparency Preparation". */
+export const SourceType = {
+  USER_PROVIDED: "USER_PROVIDED",
+} as const;
+export type SourceType = (typeof SourceType)[keyof typeof SourceType];
