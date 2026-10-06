@@ -958,3 +958,31 @@ model OrganizationProduct {
   @@index([organizationId, classificationCode])
   @@map("organization_products")
 }
+
+// --- Sprint 6: product intelligence -------------------------------------
+
+/// Global (not organization-scoped) computed intelligence for one trade
+/// dataset version, keyed by the HS/ITC-HS code the dataset covers. Saved
+/// organization products reference it by code at request time; tenant
+/// access is always checked on the OrganizationProduct first. A Sprint 9
+/// ingestion provider produces new datasetVersions; old rows remain as history.
+model ProductIntelligenceSnapshot {
+  id               String   @id @default(cuid())
+  datasetKey       String
+  datasetVersion   String
+  codeSystem       CodeSystem
+  code             String
+  sourceType       OpportunitySourceType
+  sourceName       String
+  opportunityScore Int
+  confidence       Int
+  /// { demand, exportGrowth, indiaStrength, ... } — 0–100, higher = more favorable.
+  components       Json
+  /// Full computed ProductIntelligence global section (trend, ecosystem, markets, risk).
+  payload          Json
+  generatedAt      DateTime @default(now())
+
+  @@unique([datasetKey, datasetVersion])
+  @@index([code])
+  @@map("product_intelligence_snapshots")
+}

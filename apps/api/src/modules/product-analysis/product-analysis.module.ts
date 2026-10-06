@@ -34,5 +34,6 @@ import { TariffReferenceService } from './reference/tariff-reference.service';
         ),
     },
   ],
+  exports: [ProductsService],
 })
 export class ProductAnalysisModule {}

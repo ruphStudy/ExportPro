@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import * as React from "react";
 import { formatTariffCode, type ProductSummary } from "@exportpro/types";
 import { productInterestsApi } from "@/lib/api/onboarding";
+import { productIntelligenceApi } from "@/lib/api/product-intelligence";
 import { productsApi } from "@/lib/api/products";
 import { toFriendlyErrorMessage } from "@/lib/api-client";
 import { hasPermission } from "@/lib/permissions";
@@ -60,6 +61,15 @@ function ProductsContent() {
     queryFn: () => productsApi.list({ q: term || undefined, page, pageSize: 20 }),
     placeholderData: keepPreviousData,
   });
+  const canViewIntelligence = hasPermission(session, "product_intelligence.view");
+  const pageIds = (products.data?.items ?? []).map((p) => p.id);
+  // One cheap summary call per page — reads existing snapshots only, never generates.
+  const intelligence = useQuery({
+    queryKey: ["product-intelligence", "summary", pageIds],
+    queryFn: () => productIntelligenceApi.summary(pageIds),
+    enabled: canViewIntelligence && pageIds.length > 0,
+  });
+  const intelById = new Map((intelligence.data ?? []).map((i) => [i.productId, i]));
   const interests = useQuery({
     queryKey: ["onboarding", "products"],
     queryFn: productInterestsApi.list,
@@ -110,6 +120,33 @@ function ProductsContent() {
       },
     },
     { key: "confidence", header: "Confidence", hideOnMobile: true, render: (p) => <ConfidenceBadge confidence={p.classificationConfidence} /> },
+    ...(canViewIntelligence
+      ? [
+          {
+            key: "intelligence",
+            header: "Intelligence",
+            hideOnMobile: true,
+            render: (p: ProductSummary) => {
+              const i = intelById.get(p.id);
+              if (!i) return <Caption>—</Caption>;
+              if (i.status === "AVAILABLE")
+                return (
+                  <Link href={`/products/${p.id}/intelligence`} className="text-sm text-primary hover:underline">
+                    {i.opportunityScore}/100
+                    <span className="ml-1 text-xs text-muted-foreground">conf. {i.confidence}</span>
+                  </Link>
+                );
+              if (i.status === "NOT_GENERATED")
+                return (
+                  <Link href={`/products/${p.id}/intelligence`} className="text-xs text-primary hover:underline">
+                    View
+                  </Link>
+                );
+              return <Caption>{i.status === "NO_DATA" ? "No data yet" : "Confirm classification"}</Caption>;
+            },
+          },
+        ]
+      : []),
     { key: "updated", header: "Last updated", hideOnMobile: true, render: (p) => new Date(p.updatedAt).toLocaleDateString() },
     {
       key: "actions",

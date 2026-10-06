@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, ArrowRight, Pencil, RotateCw, Search } from "lucide-react";
+import { AlertTriangle, ArrowRight, BarChart3, Pencil, RotateCw, Search } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
@@ -12,6 +12,7 @@ import {
   type HSReferenceItem,
   type ProductDetail,
 } from "@exportpro/types";
+import { productIntelligenceApi } from "@/lib/api/product-intelligence";
 import { productsApi } from "@/lib/api/products";
 import { toFriendlyErrorMessage } from "@/lib/api-client";
 import { hasPermission } from "@/lib/permissions";
@@ -61,8 +62,14 @@ function ProductDetailContent() {
   const canUpdate = hasPermission(session, "products.update");
   const canConfirm = hasPermission(session, "products.confirm_classification");
   const canViewOpportunities = hasPermission(session, "opportunities.view");
+  const canViewIntelligence = hasPermission(session, "product_intelligence.view");
 
   const detail = useQuery({ queryKey: ["products", "detail", id], queryFn: () => productsApi.getById(id) });
+  const intelligence = useQuery({
+    queryKey: ["product-intelligence", "summary", id, detail.data?.classificationCode],
+    queryFn: () => productIntelligenceApi.summary([id]).then((r) => r[0] ?? null),
+    enabled: canViewIntelligence && Boolean(detail.data),
+  });
   const [editOpen, setEditOpen] = React.useState(false);
   const [changeOpen, setChangeOpen] = React.useState(searchParams.get("change") === "classification");
   const [pick, setPick] = React.useState<HSReferenceItem | null>(null);
@@ -207,6 +214,34 @@ function ProductDetailContent() {
         </div>
 
         <aside className="flex flex-col gap-4">
+          {canViewIntelligence && (
+            <Card className="p-4">
+              <SectionTitle className="text-sm">Product Intelligence</SectionTitle>
+              {intelligence.isLoading ? (
+                <HelperText className="mt-1">Checking available trade intelligence…</HelperText>
+              ) : intelligence.data?.status === "CLASSIFICATION_REQUIRED" ? (
+                <HelperText className="mt-1">Confirm product classification before viewing detailed intelligence.</HelperText>
+              ) : intelligence.data?.status === "NO_DATA" ? (
+                <HelperText className="mt-1">Trade intelligence is not available for this product yet.</HelperText>
+              ) : intelligence.data ? (
+                <>
+                  <HelperText className="mt-1">
+                    {intelligence.data.status === "AVAILABLE"
+                      ? `Opportunity ${intelligence.data.opportunityScore}/100 · data confidence ${intelligence.data.confidence}/100.`
+                      : "Export trends, India supply ecosystem, markets and risk signals."}
+                  </HelperText>
+                  <Button asChild className="mt-3 w-full">
+                    <Link href={`/products/${p.id}/intelligence`}>
+                      <BarChart3 className="size-4" aria-hidden="true" />
+                      View Product Intelligence
+                    </Link>
+                  </Button>
+                </>
+              ) : (
+                <HelperText className="mt-1">Product intelligence status is unavailable right now.</HelperText>
+              )}
+            </Card>
+          )}
           <Card className="p-4">
             <SectionTitle className="text-sm">Continue to Market Analysis</SectionTitle>
             <HelperText className="mt-1">

@@ -7,6 +7,7 @@ import { useParams } from "next/navigation";
 import * as React from "react";
 import { countryLabel, PRODUCT_CATEGORIES } from "@exportpro/types";
 import { opportunitiesApi, watchlistApi } from "@/lib/api/opportunities";
+import { productsApi } from "@/lib/api/products";
 import { toFriendlyErrorMessage } from "@/lib/api-client";
 import { hasPermission } from "@/lib/permissions";
 import { FRESHNESS_LABELS, SOURCE_TYPE_LABELS } from "@/lib/opportunity-labels";
@@ -38,9 +39,17 @@ function OpportunityDetailContent() {
   const { data: session } = useSession();
   const canSave = hasPermission(session, "opportunities.save");
   const canAnalyzeProduct = hasPermission(session, "products.analyze");
+  const canViewIntelligence = hasPermission(session, "product_intelligence.view") && hasPermission(session, "products.view");
   const queryClient = useQueryClient();
 
   const detail = useQuery({ queryKey: ["opportunities", "detail", params.id], queryFn: () => opportunitiesApi.getById(params.id) });
+  // Entry to Product Intelligence only when the org has already saved this product (same name); nothing is created here.
+  const savedProduct = useQuery({
+    queryKey: ["products", "list", "for-opportunity", detail.data?.productName],
+    queryFn: () => productsApi.list({ q: detail.data!.productName, pageSize: 5 }),
+    enabled: canViewIntelligence && Boolean(detail.data),
+    select: (r) => r.items.find((p) => p.displayName.toLowerCase() === detail.data!.productName.toLowerCase()) ?? null,
+  });
 
   const save = useMutation({
     mutationFn: () => watchlistApi.save(params.id),
@@ -86,7 +95,12 @@ function OpportunityDetailContent() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          {canAnalyzeProduct && (
+          {savedProduct.data && (
+            <Button asChild variant="outline">
+              <Link href={`/products/${savedProduct.data.id}/intelligence`}>View Product Intelligence</Link>
+            </Button>
+          )}
+          {canAnalyzeProduct && !savedProduct.data && (
             // Only prefills the analysis form — nothing is classified, saved or changed on the opportunity.
             <Button asChild variant="outline">
               <Link
