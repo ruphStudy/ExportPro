@@ -154,7 +154,7 @@ export class CommercialCoreService {
   async nextNumber(
     tx: Tx,
     organizationId: string,
-    docType: 'QUOTATION' | 'PI',
+    docType: 'QUOTATION' | 'PI' | 'CI' | 'PL' | 'SI',
     prefix: string,
     yearlyReset: boolean,
     now = new Date(),
@@ -282,7 +282,7 @@ export class CommercialCoreService {
     tx: Tx | PrismaService,
     a: { organizationId: string; userId: string | null },
     e: {
-      entityType: 'QUOTATION' | 'PI' | 'PO';
+      entityType: 'QUOTATION' | 'PI' | 'PO' | 'DOCUMENT' | 'COMPLIANCE';
       entityId: string;
       lineageId: string;
       type: string;

@@ -508,6 +508,10 @@ model Organization {
   fxRateSnapshots      FxRateSnapshot[]
   inquiries            BuyerInquiry[]
   commercialSettings   CommercialSettings?
+  complianceRules      ComplianceRule[]
+  complianceChecklists ComplianceChecklist[]
+  tradeDocuments       TradeDocument[]
+  documentTemplates    DocumentTemplate[]
   quotations           Quotation[]
   proformaInvoices     ProformaInvoice[]
   purchaseOrders       BuyerPurchaseOrder[]
@@ -3115,4 +3119,199 @@ model CommercialEvent {
 
   @@index([organizationId, lineageId])
   @@map("commercial_events")
+}
+
+// --- Sprint 16: export compliance & trade documents ----------------------
+
+/// Deterministic compliance rule. organizationId null = platform rule (seeded,
+/// versioned in code, read-only for users); otherwise an organization's
+/// USER_DEFINED rule. A new version is a new row; evaluations keep the
+/// version and a snapshot they were evaluated with.
+model ComplianceRule {
+  id               String        @id @default(cuid())
+  organizationId   String?
+  organization     Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  code             String
+  version          Int           @default(1)
+  name             String
+  description      String
+  requirementType  String
+  level            String
+  severity         String
+  basis            String
+  jurisdiction     String
+  tradeDirection   String        @default("EXPORT")
+  countryCode      String?
+  productCategory  String?
+  hsPrefixes       String[]      @default([])
+  conditionJson    Json?
+  /// How the requirement is satisfied: registration / certification / document types / manual.
+  satisfiedBy      Json
+  documentTypes    String[]      @default([])
+  responsibleParty String        @default("EXPORTER")
+  sourceType       String
+  sourceName       String
+  sourceUrl        String?
+  sourceDate       DateTime?
+  lastCheckedAt    DateTime?
+  effectiveFrom    DateTime?
+  effectiveTo      DateTime?
+  confidence       String        @default("MEDIUM")
+  active           Boolean       @default(true)
+  createdByUserId  String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  instances ComplianceRequirementInstance[]
+
+  @@unique([code, version])
+  @@index([organizationId])
+  @@map("compliance_rules")
+}
+
+/// One compliance checklist per transaction anchor: an accepted buyer PO, or
+/// (provisional) a quotation before a PO exists.
+model ComplianceChecklist {
+  id              String       @id @default(cuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  purchaseOrderId String?      @unique
+  quotationId     String?      @unique
+  provisional     Boolean      @default(false)
+  /// Inputs used for the last evaluation (destination, HS codes, Incoterm …).
+  context         Json
+  coverage        Json
+  readiness       String       @default("NOT_READY")
+  evaluatedAt     DateTime     @default(now())
+  evaluatedByUserId String?
+  readyReadiness  String?
+  readyAt         DateTime?
+  readyByUserId   String?
+  readyNote       String?
+  /// Rule ids/versions, statuses and document refs at "Mark compliance ready".
+  readySnapshot   Json?
+  rowVersion      Int          @default(0)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  requirements ComplianceRequirementInstance[]
+
+  @@index([organizationId, readiness])
+  @@map("compliance_checklists")
+}
+
+model ComplianceRequirementInstance {
+  id                 String              @id @default(cuid())
+  organizationId     String
+  checklistId        String
+  checklist          ComplianceChecklist @relation(fields: [checklistId], references: [id], onDelete: Cascade)
+  ruleId             String?
+  rule               ComplianceRule?     @relation(fields: [ruleId], references: [id], onDelete: SetNull)
+  ruleCode           String
+  ruleVersion        Int
+  /// Rule as evaluated (later rule changes never rewrite history).
+  ruleSnapshot       Json
+  productKey         String              @default("")
+  productId          String?
+  productLabel       String?
+  countryCode        String?
+  applicability      String
+  status             String              @default("NOT_STARTED")
+  explanation        String
+  evidenceDocumentId String?
+  notes              String?
+  dueDate            DateTime?
+  overrideKind       String?
+  overrideReason     String?
+  overriddenByUserId String?
+  overriddenAt       DateTime?
+  manualNote         String?
+  manualByUserId     String?
+  manualAt           DateTime?
+  sortOrder          Int                 @default(0)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  @@unique([checklistId, ruleCode, productKey])
+  @@index([organizationId])
+  @@index([evidenceDocumentId])
+  @@map("compliance_requirement_instances")
+}
+
+/// One row per document version; rootId groups a lineage sharing documentNumber.
+/// Generated (exporter-prepared) documents keep editable `content` while draft and
+/// an immutable `snapshot` once approved. Uploaded documents keep a private file.
+model TradeDocument {
+  id                String       @id @default(cuid())
+  organizationId    String
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  rootId            String
+  version           Int          @default(1)
+  previousVersionId String?
+  revisionReason    String?
+  documentType      String
+  title             String
+  documentNumber    String?
+  source            String
+  responsibleParty  String       @default("EXPORTER")
+  status            String
+  generated         Boolean      @default(false)
+  buyerCompanyId    String?
+  purchaseOrderId   String?
+  quotationId       String?
+  proformaInvoiceId String?
+  inquiryId         String?
+  productId         String?
+  countryCode       String?
+  issuer            String?
+  issueDate         DateTime?
+  expiryDate        DateTime?
+  notes             String?
+  internalNotes     String?
+  storageKey        String?
+  originalFilename  String?
+  mimeType          String?
+  sizeBytes         Int?
+  checksum          String?
+  content           Json?
+  snapshot          Json?
+  totals            Json?
+  overrideReason    String?
+  overrideByUserId  String?
+  reviewedByUserId  String?
+  reviewedAt        DateTime?
+  approvedByUserId  String?
+  approvedAt        DateTime?
+  rejectionReason   String?
+  archivedAt        DateTime?
+  rowVersion        Int          @default(0)
+  createdByUserId   String
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  @@unique([organizationId, documentType, documentNumber, version])
+  @@index([organizationId, documentType])
+  @@index([organizationId, purchaseOrderId])
+  @@index([organizationId, checksum])
+  @@index([rootId])
+  @@map("trade_documents")
+}
+
+/// Plain-text template fields per generated document type (no HTML).
+/// documentType GENERAL carries organization-wide settings (expiry warning window).
+model DocumentTemplate {
+  id                String       @id @default(cuid())
+  organizationId    String
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  documentType      String
+  footer            String?
+  terms             String?
+  declaration       String?
+  signatureLabel    String?
+  expiryWarningDays Int          @default(30)
+  updatedByUserId   String?
+  updatedAt         DateTime     @updatedAt
+
+  @@unique([organizationId, documentType])
+  @@map("document_templates")
 }

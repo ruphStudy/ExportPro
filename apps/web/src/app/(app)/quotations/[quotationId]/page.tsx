@@ -236,6 +236,7 @@ function Links({ d }: { d: QuotationDetail }) {
         {d.costingId && <li>Costing: <Link className="text-primary hover:underline" href={`/costing/${d.costingId}`}>Open costing</Link></li>}
         {d.crm && <li>CRM lead: <Link className="text-primary hover:underline" href={`/crm/leads/${d.crm.leadId}`}>Open lead</Link> <Caption>(stage {d.crm.stage.replace(/_/g, " ").toLowerCase()})</Caption></li>}
         {!d.inquiry && !d.costingId && !d.crm && <li><HelperText>Manual quotation — no linked inquiry, costing or lead.</HelperText></li>}
+        <li>Compliance: <Link className="text-primary hover:underline" href={`/compliance/quotations/${d.id}`}>Provisional checklist</Link></li>
       </ul>
       {d.crm?.stageSuggestion && (
         <p role="note" className="rounded-md border border-info/40 bg-info/5 p-2">

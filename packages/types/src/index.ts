@@ -19,3 +19,4 @@ export * from "./outreach";
 export * from "./costing";
 export * from "./inquiries";
 export * from "./commercial";
+export * from "./compliance";

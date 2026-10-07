@@ -137,10 +137,11 @@ export const NAV_ITEMS: NavItem[] = [
   },
   {
     label: "Documents & Compliance",
-    href: "/documents",
+    href: "/compliance",
     icon: FileText,
-    status: "placeholder",
-    description: "Trade documents and compliance tracking.",
+    status: "active",
+    permission: "compliance.view",
+    description: "Order compliance checklists, trade documents and evidence.",
   },
   {
     label: "Shipments & Logistics",
@@ -212,7 +213,7 @@ export const NAV_ITEMS: NavItem[] = [
 ];
 
 /** Routes without their own sidebar item, shown under the closest parent section. */
-const SECTION_ALIASES: Record<string, string> = { "/compare": "/recommendations", "/proforma-invoices": "/quotations", "/purchase-orders": "/quotations" };
+const SECTION_ALIASES: Record<string, string> = { "/compare": "/recommendations", "/proforma-invoices": "/quotations", "/purchase-orders": "/quotations", "/documents": "/compliance" };
 
 export function findNavItemByPath(pathname: string): NavItem | undefined {
   const alias = Object.entries(SECTION_ALIASES).find(([prefix]) => pathname === prefix || pathname.startsWith(`${prefix}/`));

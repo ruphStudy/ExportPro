@@ -26,6 +26,7 @@ import { BuyersModule } from './modules/buyers/buyers.module';
 import { CostingModule } from './modules/costing/costing.module';
 import { InquiriesModule } from './modules/inquiries/inquiries.module';
 import { CommercialModule } from './modules/commercial/commercial.module';
+import { ComplianceModule } from './modules/compliance/compliance.module';
 import { CrmModule } from './modules/crm/crm.module';
 import { OutreachModule } from './modules/outreach/outreach.module';
 import { DevModule } from './modules/dev/dev.module';
@@ -63,6 +64,7 @@ import { DevModule } from './modules/dev/dev.module';
     CostingModule,
     InquiriesModule,
     CommercialModule,
+    ComplianceModule,
     CrmModule,
     OutreachModule,
     // Dev-only mailbox for reading OTP/reset emails without a real mail provider.
