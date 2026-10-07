@@ -43,6 +43,7 @@ import { RequirePermission } from "@/components/layout/require-permission";
 import { OutreachHistoryCard, StartOutreachButton } from "@/components/outreach/outreach-history";
 import { Badge } from "@/components/ui/badge";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
+import { LeadCommercialCard } from "@/components/commercial/entry-points";
 import { LeadCostingsCard } from "@/components/costing/costing-entry";
 import { LeadInquiriesCard } from "@/components/inquiries/lead-inquiries-card";
 import { Button } from "@/components/ui/button";
@@ -103,6 +104,7 @@ function LeadDetail() {
           <NextActionCard key={`na-${l.version}`} lead={l} />
           <LeadInquiriesCard leadId={l.id} />
           <LeadCostingsCard leadId={l.id} />
+          <LeadCommercialCard leadId={l.id} />
           <RemindersCard lead={l} reminders={d.reminders} tasks={d.tasks} members={memberList} />
           <DealCard key={`deal-${l.version}`} lead={l} />
           <QualificationCard key={`q-${l.version}`} lead={l} />

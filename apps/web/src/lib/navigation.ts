@@ -4,6 +4,7 @@ import {
   ClipboardCheck,
   Contact,
   Database,
+  FileSignature,
   FileText,
   Globe2,
   Inbox,
@@ -127,6 +128,14 @@ export const NAV_ITEMS: NavItem[] = [
     description: "Export cost sheets, Incoterm® pricing, margins and scenario comparison.",
   },
   {
+    label: "Quotes & Orders",
+    href: "/quotations",
+    icon: FileSignature,
+    status: "active",
+    permission: "quotations.view",
+    description: "Quotations, proforma invoices and buyer purchase orders.",
+  },
+  {
     label: "Documents & Compliance",
     href: "/documents",
     icon: FileText,
@@ -203,7 +212,7 @@ export const NAV_ITEMS: NavItem[] = [
 ];
 
 /** Routes without their own sidebar item, shown under the closest parent section. */
-const SECTION_ALIASES: Record<string, string> = { "/compare": "/recommendations" };
+const SECTION_ALIASES: Record<string, string> = { "/compare": "/recommendations", "/proforma-invoices": "/quotations", "/purchase-orders": "/quotations" };
 
 export function findNavItemByPath(pathname: string): NavItem | undefined {
   const alias = Object.entries(SECTION_ALIASES).find(([prefix]) => pathname === prefix || pathname.startsWith(`${prefix}/`));

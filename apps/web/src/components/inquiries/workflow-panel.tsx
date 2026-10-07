@@ -17,6 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { LinkedQuotationsCard } from "@/components/commercial/entry-points";
 import { Caption, HelperText, SectionTitle } from "@/components/ui/typography";
 import { useInquiryMutation } from "./rfq-panel";
 
@@ -186,10 +187,13 @@ function Handoffs({ d }: { d: BuyerInquiryDetail }) {
   return (
     <section aria-labelledby="h-h">
       <h3 id="h-h" className="text-sm font-semibold">Handoffs</h3>
-      <HelperText>Creates a request for the future quotation / sample modules. No quotation document, pricing or sample logistics are produced here.</HelperText>
+      <HelperText>Creates a quotation request (then a priced quotation in Quotes &amp; Orders) or a sample request. No sample logistics are produced here.</HelperText>
       <div className="mt-2 flex flex-col gap-2 text-sm">
         {d.quotationRequest ? (
-          <p role="status"><Badge variant="success">Quotation request created</Badge> <Caption>{d.quotationRequest.status === "READY_FOR_FUTURE_MODULE" ? "Ready for the quotation module" : "Pending — some item quantities are missing"} · {new Date(d.quotationRequest.createdAt).toLocaleString()}{d.quotationRequest.requestedBy ? ` · ${d.quotationRequest.requestedBy}` : ""}</Caption></p>
+          <>
+            <p role="status"><Badge variant="success">Quotation request created</Badge> <Caption>{d.quotationRequest.status === "PENDING" ? "Pending — some item quantities are missing" : d.quotationRequest.status.replace(/_/g, " ").toLowerCase()} · {new Date(d.quotationRequest.createdAt).toLocaleString()}{d.quotationRequest.requestedBy ? ` · ${d.quotationRequest.requestedBy}` : ""}</Caption></p>
+            <LinkedQuotationsCard filter={{ inquiryId: d.id }} create={{ quotationRequestId: d.quotationRequest.id }} />
+          </>
         ) : can("create_quotation_request") ? (
           <Button size="sm" className="w-fit" onClick={() => quote.mutate()} disabled={quote.isPending}>Create quotation request</Button>
         ) : (

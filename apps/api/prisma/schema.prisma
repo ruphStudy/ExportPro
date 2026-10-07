@@ -507,6 +507,10 @@ model Organization {
   exportCostings       ExportCosting[]
   fxRateSnapshots      FxRateSnapshot[]
   inquiries            BuyerInquiry[]
+  commercialSettings   CommercialSettings?
+  quotations           Quotation[]
+  proformaInvoices     ProformaInvoice[]
+  purchaseOrders       BuyerPurchaseOrder[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2728,4 +2732,387 @@ model SampleRequest {
 
   @@index([organizationId])
   @@map("sample_requests")
+}
+
+// --- Sprint 15: quotation, proforma invoice & buyer purchase order ------
+
+enum QuotationStatus {
+  DRAFT
+  READY
+  ISSUED
+  SENT
+  ACCEPTED
+  REJECTED
+  EXPIRED
+  SUPERSEDED
+  CANCELLED
+}
+
+enum ProformaInvoiceStatus {
+  DRAFT
+  ISSUED
+  SENT
+  ACCEPTED
+  SUPERSEDED
+  CANCELLED
+}
+
+enum PurchaseOrderStatus {
+  RECEIVED
+  UNDER_REVIEW
+  MATCHED
+  DISCREPANCY
+  ACCEPTED
+  REJECTED
+  CANCELLED
+}
+
+/// Minimal per-organization commercial settings (numbering, defaults, bank details).
+model CommercialSettings {
+  id                       String       @id @default(cuid())
+  organizationId           String       @unique
+  organization             Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  quotationPrefix          String       @default("QT")
+  piPrefix                 String       @default("PI")
+  yearlyReset              Boolean      @default(true)
+  unitPricePrecision       Int          @default(2)
+  defaultValidityDays      Int          @default(30)
+  quantityTolerancePercent Decimal      @default(0) @db.Decimal(6, 2)
+  priceTolerancePercent    Decimal      @default(0) @db.Decimal(6, 2)
+  quotationTerms           String?
+  piTerms                  String?
+  /// Sensitive; never written to audit metadata or logs.
+  bankDetails              Json?
+  updatedByUserId          String?
+  updatedAt                DateTime     @updatedAt
+
+  @@map("commercial_settings")
+}
+
+/// Transactional document counters (never derived from row counts; numbers are never reused).
+model CommercialNumberSequence {
+  id             String @id @default(cuid())
+  organizationId String
+  docType        String
+  year           Int
+  lastValue      Int    @default(0)
+
+  @@unique([organizationId, docType, year])
+  @@map("commercial_number_sequences")
+}
+
+/// One row per revision. rootId groups a lineage sharing quotationNumber.
+model Quotation {
+  id                 String          @id @default(cuid())
+  organizationId     String
+  organization       Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  quotationNumber    String
+  revision           Int             @default(1)
+  rootId             String?
+  revisionOfId       String?
+  revisionReason     String?
+  status             QuotationStatus @default(DRAFT)
+  source             String
+  buyerCompanyId     String?
+  buyerName          String?
+  buyerContactId     String?
+  crmLeadId          String?
+  inquiryId          String?
+  quotationRequestId String?
+  costingId          String?
+  issueDate          DateTime?
+  validUntil         DateTime?
+  currency           String
+  incoterm           String?
+  incotermPlace      String?
+  originCountry      String?
+  destinationCountry String?
+  destinationPort    String?
+  paymentTerms       String?
+  deliveryTerms      String?
+  leadTime           String?
+  shipmentWindow     String?
+  partialShipment    Boolean?
+  transshipment      Boolean?
+  buyerNotes         String?
+  internalNotes      String?
+  termsAndConditions String?
+  additionalCharges  Decimal         @default(0) @db.Decimal(20, 2)
+  chargesLabel       String?
+  discount           Decimal         @default(0) @db.Decimal(20, 2)
+  subtotal           Decimal?        @db.Decimal(20, 2)
+  totalAmount        Decimal?        @db.Decimal(20, 2)
+  buyerSnapshot      Json?
+  exporterSnapshot   Json?
+  issuedAt           DateTime?
+  issuedByUserId     String?
+  acceptedAt         DateTime?
+  acceptedByUserId   String?
+  acceptanceSource   String?
+  buyerReference     String?
+  acceptanceNote     String?
+  rejectedAt         DateTime?
+  rejectionReason    String?
+  cancelledAt        DateTime?
+  cancelReason       String?
+  expiredAt          DateTime?
+  rowVersion         Int             @default(0)
+  createdByUserId    String
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  items            QuotationItem[]
+  proformaInvoices ProformaInvoice[]
+  purchaseOrders   BuyerPurchaseOrder[]
+
+  @@unique([organizationId, quotationNumber, revision])
+  @@index([organizationId, status])
+  @@index([organizationId, updatedAt])
+  @@index([rootId])
+  @@index([buyerCompanyId])
+  @@index([crmLeadId])
+  @@index([inquiryId])
+  @@index([costingId])
+  @@map("quotations")
+}
+
+model QuotationItem {
+  id                 String    @id @default(cuid())
+  organizationId     String
+  quotationId        String
+  quotation          Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  sortOrder          Int       @default(0)
+  productId          String?
+  inquiryItemId      String?
+  description        String
+  hsCode             String?
+  specification      String?
+  packaging          String?
+  quantity           Decimal   @db.Decimal(20, 4)
+  unit               String
+  unitPrice          Decimal?  @db.Decimal(20, 6)
+  totalPrice         Decimal?  @db.Decimal(20, 2)
+  deliveryNotes      String?
+  countryOfOrigin    String?
+  priceSource        String    @default("MANUAL")
+  costingId          String?
+  costingScenarioId  String?
+  /// Internal pricing snapshot from Sprint 14 (never rendered on buyer documents).
+  pricingSnapshot    Json?
+  costingUnitPrice   Decimal?  @db.Decimal(20, 6)
+  overrideReason     String?
+  overriddenByUserId String?
+
+  @@index([quotationId])
+  @@index([costingId])
+  @@map("quotation_items")
+}
+
+model ProformaInvoice {
+  id                  String                @id @default(cuid())
+  organizationId      String
+  organization        Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  piNumber            String
+  revision            Int                   @default(1)
+  rootId              String?
+  revisionOfId        String?
+  revisionReason      String?
+  status              ProformaInvoiceStatus @default(DRAFT)
+  source              String                @default("QUOTATION")
+  quotationId         String?
+  quotation           Quotation?            @relation(fields: [quotationId], references: [id])
+  overrideReason      String?
+  buyerCompanyId      String?
+  buyerName           String?
+  crmLeadId           String?
+  inquiryId           String?
+  issueDate           DateTime?
+  validUntil          DateTime?
+  currency            String
+  incoterm            String?
+  incotermPlace       String?
+  destinationCountry  String?
+  destinationPort     String?
+  paymentTerms        String?
+  deliveryTerms       String?
+  buyerNotes          String?
+  internalNotes       String?
+  terms               String?
+  additionalCharges   Decimal               @default(0) @db.Decimal(20, 2)
+  chargesLabel        String?
+  discount            Decimal               @default(0) @db.Decimal(20, 2)
+  subtotal            Decimal               @default(0) @db.Decimal(20, 2)
+  totalAmount         Decimal               @default(0) @db.Decimal(20, 2)
+  buyerSnapshot       Json?
+  exporterSnapshot    Json?
+  /// Sensitive; masked for roles without commercial.settings / proforma_invoice.edit.
+  bankDetailsSnapshot Json?
+  issuedAt            DateTime?
+  issuedByUserId      String?
+  cancelledAt         DateTime?
+  cancelReason        String?
+  rowVersion          Int                   @default(0)
+  createdByUserId     String
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+
+  items          ProformaInvoiceItem[]
+  purchaseOrders BuyerPurchaseOrder[]
+
+  @@unique([organizationId, piNumber, revision])
+  @@index([organizationId, status])
+  @@index([rootId])
+  @@index([quotationId])
+  @@index([buyerCompanyId])
+  @@index([crmLeadId])
+  @@map("proforma_invoices")
+}
+
+model ProformaInvoiceItem {
+  id              String          @id @default(cuid())
+  organizationId  String
+  piId            String
+  pi              ProformaInvoice @relation(fields: [piId], references: [id], onDelete: Cascade)
+  sortOrder       Int             @default(0)
+  quotationItemId String?
+  productId       String?
+  description     String
+  hsCode          String?
+  specification   String?
+  packaging       String?
+  quantity        Decimal         @db.Decimal(20, 4)
+  unit            String
+  unitPrice       Decimal         @db.Decimal(20, 6)
+  totalPrice      Decimal         @db.Decimal(20, 2)
+
+  @@index([piId])
+  @@map("proforma_invoice_items")
+}
+
+/// Buyer-issued PO (buyer-provided evidence). Never generated on the exporter's behalf.
+model BuyerPurchaseOrder {
+  id                String              @id @default(cuid())
+  organizationId    String
+  organization      Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  buyerCompanyId    String
+  crmLeadId         String?
+  inquiryId         String?
+  quotationId       String?
+  quotation         Quotation?          @relation(fields: [quotationId], references: [id])
+  proformaInvoiceId String?
+  proformaInvoice   ProformaInvoice?    @relation(fields: [proformaInvoiceId], references: [id])
+  poNumber          String
+  poNumberKey       String
+  poDate            DateTime
+  currency          String
+  incoterm          String?
+  incotermPlace     String?
+  paymentTerms      String?
+  deliveryTerms     String?
+  destination       String?
+  totalAmount       Decimal?            @db.Decimal(20, 2)
+  notes             String?
+  status            PurchaseOrderStatus @default(RECEIVED)
+  source            String              @default("MANUAL")
+  reviewDecision    String?
+  reviewReason      String?
+  overrideReason    String?
+  reviewedByUserId  String?
+  reviewedAt        DateTime?
+  rowVersion        Int                 @default(0)
+  createdByUserId   String
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  items         BuyerPurchaseOrderItem[]
+  discrepancies PODiscrepancy[]
+  attachments   PurchaseOrderAttachment[]
+
+  @@unique([organizationId, buyerCompanyId, poNumberKey])
+  @@index([organizationId, status])
+  @@index([quotationId])
+  @@index([proformaInvoiceId])
+  @@index([crmLeadId])
+  @@map("buyer_purchase_orders")
+}
+
+model BuyerPurchaseOrderItem {
+  id               String             @id @default(cuid())
+  organizationId   String
+  purchaseOrderId  String
+  purchaseOrder    BuyerPurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  sortOrder        Int                @default(0)
+  quotationItemId  String?
+  productId        String?
+  buyerProductCode String?
+  description      String
+  specification    String?
+  packaging        String?
+  quantity         Decimal            @db.Decimal(20, 4)
+  unit             String
+  unitPrice        Decimal            @db.Decimal(20, 6)
+  totalPrice       Decimal?           @db.Decimal(20, 2)
+  deliveryDate     String?
+
+  @@index([purchaseOrderId])
+  @@map("buyer_purchase_order_items")
+}
+
+model PurchaseOrderAttachment {
+  id               String             @id @default(cuid())
+  organizationId   String
+  purchaseOrderId  String
+  purchaseOrder    BuyerPurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  originalFilename String
+  storageKey       String
+  mimeType         String
+  sizeBytes        Int
+  checksum         String
+  uploadedByUserId String
+  createdAt        DateTime           @default(now())
+
+  @@index([purchaseOrderId])
+  @@map("purchase_order_attachments")
+}
+
+/// Deterministic comparison output. `signature` keeps a human resolution across re-comparisons.
+model PODiscrepancy {
+  id               String             @id @default(cuid())
+  organizationId   String
+  purchaseOrderId  String
+  purchaseOrder    BuyerPurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  signature        String
+  against          String
+  type             String
+  severity         String
+  field            String
+  itemLabel        String?
+  expectedValue    String?
+  actualValue      String?
+  message          String
+  status           String             @default("OPEN")
+  resolutionNote   String?
+  resolvedByUserId String?
+  resolvedAt       DateTime?
+  createdAt        DateTime           @default(now())
+
+  @@unique([purchaseOrderId, signature])
+  @@map("po_discrepancies")
+}
+
+/// Commercial business timeline (separate from the security AuditLog).
+model CommercialEvent {
+  id             String   @id @default(cuid())
+  organizationId String
+  entityType     String
+  entityId       String
+  lineageId      String
+  type           String
+  title          String
+  metadata       Json?
+  actorUserId    String?
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId, lineageId])
+  @@map("commercial_events")
 }

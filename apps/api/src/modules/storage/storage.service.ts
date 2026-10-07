@@ -148,7 +148,7 @@ export class StorageService {
    * privately. Returns an opaque key — never a disk path or public URL.
    */
   async savePrivateFile(
-    folder: 'lead-attachments' | 'inquiry-attachments',
+    folder: 'lead-attachments' | 'inquiry-attachments' | 'po-attachments',
     file: Express.Multer.File,
     allowed: Record<string, string[]>,
     maxSizeBytes: number,

@@ -27,6 +27,7 @@ import { ConfirmDialog } from "@/components/ui/modal";
 import { Select } from "@/components/ui/select";
 import { PageSkeleton, Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { LinkedQuotationsCard } from "@/components/commercial/entry-points";
 import { Caption, HelperText, PageTitle, SectionTitle } from "@/components/ui/typography";
 
 const DISCLAIMER = "Cost allocation is an operational pricing aid. Contractual responsibilities depend on the named place and agreed Incoterms® terms.";
@@ -112,6 +113,7 @@ function CostingEditor() {
           <ResultCard c={c} s={selected} />
           <IncotermCard policy={c.policies.find((p) => p.incoterm === selected.incoterm)!} s={selected} />
           <HistoryCard c={c} />
+          <LinkedQuotationsCard filter={{ costingId: c.id }} create={c.status === "ARCHIVED" ? undefined : { costingId: c.id, crmLeadId: c.crmLeadId, buyerCompanyId: c.buyerCompanyId }} title="Used in quotations" />
         </div>
       </div>
     </div>

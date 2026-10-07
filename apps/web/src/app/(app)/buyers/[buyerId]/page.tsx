@@ -16,6 +16,7 @@ import { hasPermission } from "@/lib/permissions";
 import { useSession } from "@/lib/session";
 import { toast } from "@/lib/toast";
 import { MatchScore, RiskBadge, SampleBuyerBanner, SaveBuyerButton, VerificationBadge } from "@/components/buyers/buyer-bits";
+import { LinkedQuotationsCard } from "@/components/commercial/entry-points";
 import { RequirePermission } from "@/components/layout/require-permission";
 import { OutreachHistoryCard, StartOutreachButton } from "@/components/outreach/outreach-history";
 import { ProvenanceBadge, ProvenanceLine } from "@/components/provenance/provenance";
@@ -232,6 +233,7 @@ function BuyerProfile() {
 
           <NotesCard key={b.orgState.notesUpdatedAt ?? "none"} b={b} />
           <OutreachHistoryCard buyerId={b.id} />
+          <LinkedQuotationsCard filter={{ buyerCompanyId: b.id }} create={{ buyerCompanyId: b.id }} title="Quotations for this buyer" />
 
           <Card className="p-4">
             <SectionTitle className="text-base">Source &amp; reliability</SectionTitle>

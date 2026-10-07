@@ -159,7 +159,7 @@ export interface QualificationChecklist {
 export interface QuotationRequest {
   id: string;
   inquiryId: string;
-  status: "PENDING" | "READY_FOR_FUTURE_MODULE";
+  status: "PENDING" | "READY_FOR_FUTURE_MODULE" | "QUOTATION_CREATED" | "QUOTATION_ISSUED";
   crmLeadId: string | null;
   buyerCompanyId: string | null;
   items: ConfirmedItem[];
