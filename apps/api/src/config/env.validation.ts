@@ -81,6 +81,26 @@ const envSchema = z.object({
   // Email provider (future sprint)
   EMAIL_PROVIDER_API_KEY: z.string().optional(),
   EMAIL_FROM_ADDRESS: z.string().optional(),
+  // Sprint 12 outreach. OUTREACH_EMAIL_PROVIDER: resend | development | none.
+  // Unset = "resend" when EMAIL_PROVIDER_API_KEY is set, else "development"
+  // outside production. The development provider never delivers anything.
+  OUTREACH_EMAIL_PROVIDER: z.preprocess(
+    emptyToUndefined,
+    z.enum(['resend', 'development', 'none']).optional(),
+  ),
+  OUTREACH_WEBHOOK_SECRET: z.preprocess(
+    emptyToUndefined,
+    z.string().optional(),
+  ),
+  OUTREACH_PROCESSOR_ENABLED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
+  OUTREACH_PROCESSOR_INTERVAL_MS: z.coerce
+    .number()
+    .int()
+    .min(1000)
+    .default(30000),
 
   // WhatsApp provider (future sprint)
   WHATSAPP_PROVIDER_API_KEY: z.string().optional(),

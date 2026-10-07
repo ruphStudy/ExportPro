@@ -40,6 +40,7 @@ import { toast } from "@/lib/toast";
 import { MatchScore, RiskBadge, VerificationBadge } from "@/components/buyers/buyer-bits";
 import { DueText, errorToast, HealthBadge, PriorityBadge, StageBadge, StageControl, useInvalidateCrm } from "@/components/crm/crm-bits";
 import { RequirePermission } from "@/components/layout/require-permission";
+import { OutreachHistoryCard, StartOutreachButton } from "@/components/outreach/outreach-history";
 import { Badge } from "@/components/ui/badge";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Button } from "@/components/ui/button";
@@ -94,6 +95,7 @@ function LeadDetail() {
           <CommentsCard leadId={l.id} comments={d.comments} members={memberList} />
           <TasksCard lead={l} tasks={d.tasks} members={memberList} />
           <AttachmentsCard leadId={l.id} attachments={d.attachments} />
+          <OutreachHistoryCard leadId={l.id} />
         </div>
         <aside className="flex min-w-0 flex-col gap-5" aria-label="Lead details">
           <NextActionCard key={`na-${l.version}`} lead={l} />
@@ -152,9 +154,12 @@ function Header({ lead: l, members }: { lead: CrmLead; members: CrmMember[] }) {
             <p className="mt-1 flex items-center gap-1 text-xs text-warning"><Info className="size-3.5" aria-hidden="true" />Commercial market differs from the buyer’s country ({countryLabel(l.buyer.countryCode)}).</p>
           )}
         </div>
-        <Button variant="outline" size="sm" asChild>
-          <Link href={buyerHref}>Buyer profile<ExternalLink className="size-3.5" aria-hidden="true" /></Link>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <StartOutreachButton size="sm" ctx={{ leadId: l.id }} disabledReason={l.contacts.some((c) => c.contactType === "EMAIL" && c.verificationStatus !== "INVALID") ? null : "No usable email contact on record"} />
+          <Button variant="outline" size="sm" asChild>
+            <Link href={buyerHref}>Buyer profile<ExternalLink className="size-3.5" aria-hidden="true" /></Link>
+          </Button>
+        </div>
       </div>
       <div className="flex flex-wrap items-center gap-1.5">
         <StageBadge stage={l.stage} />

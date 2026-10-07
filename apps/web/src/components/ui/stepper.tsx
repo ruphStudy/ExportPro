@@ -11,12 +11,14 @@ export interface StepperProps {
   /** 1-indexed current step. */
   current: number;
   onStepClick?: (step: number) => void;
+  /** Accessible name for the step navigation. */
+  label?: string;
 }
 
 /** Semantic step navigation (nav + ordered list) so screen readers announce "step 2 of 5" correctly. */
-export function Stepper({ steps, current, onStepClick }: StepperProps) {
+export function Stepper({ steps, current, onStepClick, label = "Onboarding steps" }: StepperProps) {
   return (
-    <nav aria-label="Onboarding steps">
+    <nav aria-label={label}>
       <ol className="flex items-center gap-1 overflow-x-auto sm:gap-2">
         {steps.map((step, index) => {
           const stepNumber = index + 1;

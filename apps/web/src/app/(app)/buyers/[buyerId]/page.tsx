@@ -17,6 +17,7 @@ import { useSession } from "@/lib/session";
 import { toast } from "@/lib/toast";
 import { MatchScore, RiskBadge, SampleBuyerBanner, SaveBuyerButton, VerificationBadge } from "@/components/buyers/buyer-bits";
 import { RequirePermission } from "@/components/layout/require-permission";
+import { OutreachHistoryCard, StartOutreachButton } from "@/components/outreach/outreach-history";
 import { ProvenanceBadge, ProvenanceLine } from "@/components/provenance/provenance";
 import { fmtDate } from "@/components/provenance/source-bits";
 import { Badge } from "@/components/ui/badge";
@@ -63,6 +64,10 @@ function BuyerProfile() {
           <div className="flex flex-wrap gap-2">
             <SaveBuyerButton buyerId={b.id} shortlisted={b.orgState.shortlisted} productId={b.context.productId} countryCode={b.context.countryCode ?? b.countryCode} size="md" />
             <AddToCrmButton b={b} />
+            <StartOutreachButton
+              ctx={{ buyerIds: [b.id], productId: b.context.productId, country: b.context.countryCode ?? b.countryCode }}
+              disabledReason={b.contacts.some((c) => c.contactType === "EMAIL" && c.verificationStatus !== "INVALID") ? null : "No usable email contact on record"}
+            />
           </div>
         </div>
         <div className="flex flex-wrap gap-1.5">
@@ -226,6 +231,7 @@ function BuyerProfile() {
           </Card>
 
           <NotesCard key={b.orgState.notesUpdatedAt ?? "none"} b={b} />
+          <OutreachHistoryCard buyerId={b.id} />
 
           <Card className="p-4">
             <SectionTitle className="text-base">Source &amp; reliability</SectionTitle>

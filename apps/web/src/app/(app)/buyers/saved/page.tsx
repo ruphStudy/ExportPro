@@ -11,6 +11,9 @@ import { toFriendlyErrorMessage } from "@/lib/api-client";
 import { BUYER_TYPE_LABELS, matchLabel } from "@/lib/buyer-labels";
 import { RiskBadge, SampleBuyerBanner, SaveBuyerButton, VerificationBadge } from "@/components/buyers/buyer-bits";
 import { RequirePermission } from "@/components/layout/require-permission";
+import { newCampaignHref } from "@/lib/api/outreach";
+import { hasPermission } from "@/lib/permissions";
+import { useSession } from "@/lib/session";
 import { fmtDate } from "@/components/provenance/source-bits";
 import { Badge } from "@/components/ui/badge";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
@@ -37,8 +40,27 @@ function detailHref(i: SavedBuyerItem) {
 function SavedBuyers() {
   const [page, setPage] = React.useState(1);
   const q = useQuery({ queryKey: ["buyers", "saved", page], queryFn: () => buyersApi.saved({ page, pageSize: 20 }), placeholderData: keepPreviousData });
+  const { data: session } = useSession();
+  const canOutreach = hasPermission(session, "outreach.create");
+  const [picked, setPicked] = React.useState<Set<string>>(new Set());
+  const toggle = (id: string) =>
+    setPicked((p) => {
+      const n = new Set(p);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
 
   const columns: Column<SavedBuyerItem>[] = [
+    ...(canOutreach
+      ? [{
+          key: "pick",
+          header: "Select",
+          render: (i: SavedBuyerItem) => (
+            <input type="checkbox" className="size-4" checked={picked.has(i.buyer.id)} onChange={() => toggle(i.buyer.id)} aria-label={`Select ${i.buyer.name} for outreach`} />
+          ),
+        }]
+      : []),
     {
       key: "buyer",
       header: "Buyer",
@@ -67,7 +89,14 @@ function SavedBuyers() {
           <PageTitle>Saved buyers</PageTitle>
           <HelperText className="mt-1">Your organization’s shortlist. Saved state and notes are never shared with other organizations.</HelperText>
         </div>
-        <Button asChild variant="outline"><Link href="/buyers">Find more buyers</Link></Button>
+        <div className="flex flex-wrap gap-2">
+          {canOutreach && (
+            <Button asChild={picked.size > 0} disabled={picked.size === 0} variant="primary">
+              {picked.size > 0 ? <Link href={newCampaignHref({ buyerIds: [...picked] })}>Start campaign ({picked.size})</Link> : <span>Select buyers for a campaign</span>}
+            </Button>
+          )}
+          <Button asChild variant="outline"><Link href="/buyers">Find more buyers</Link></Button>
+        </div>
       </div>
       {q.data?.sampleData && <SampleBuyerBanner />}
       {q.data && <p className="text-sm text-muted-foreground" aria-live="polite">{q.data.meta.totalItems} saved buyer{q.data.meta.totalItems === 1 ? "" : "s"}</p>}

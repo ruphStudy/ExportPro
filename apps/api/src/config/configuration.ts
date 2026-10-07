@@ -40,6 +40,13 @@ export function buildConfiguration(env: EnvConfig) {
       apiKey: env.EMAIL_PROVIDER_API_KEY,
       fromAddress: env.EMAIL_FROM_ADDRESS,
     },
+    outreach: {
+      provider: env.OUTREACH_EMAIL_PROVIDER,
+      apiKey: env.EMAIL_PROVIDER_API_KEY,
+      webhookSecret: env.OUTREACH_WEBHOOK_SECRET,
+      processorEnabled: env.OUTREACH_PROCESSOR_ENABLED,
+      processorIntervalMs: env.OUTREACH_PROCESSOR_INTERVAL_MS,
+    },
     whatsapp: {
       apiKey: env.WHATSAPP_PROVIDER_API_KEY,
     },

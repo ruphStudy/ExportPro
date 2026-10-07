@@ -49,6 +49,13 @@ export const PERMISSIONS = [
   "crm.tasks",
   "crm.attachments",
   "crm.manage",
+  "outreach.view",
+  "outreach.create",
+  "outreach.edit",
+  "outreach.launch",
+  "outreach.pause",
+  "outreach.templates",
+  "outreach.settings",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -109,6 +116,13 @@ export const ROLE_PERMISSIONS: Record<MembershipRole, readonly Permission[]> = {
     "crm.tasks",
     "crm.attachments",
     "crm.manage",
+    "outreach.view",
+    "outreach.create",
+    "outreach.edit",
+    "outreach.launch",
+    "outreach.pause",
+    "outreach.templates",
+    "outreach.settings",
   ],
   // Same as OWNER except owner-only destructive actions (transfer
   // ownership, delete organization) are enforced by explicit role
@@ -157,6 +171,13 @@ export const ROLE_PERMISSIONS: Record<MembershipRole, readonly Permission[]> = {
     "crm.tasks",
     "crm.attachments",
     "crm.manage",
+    "outreach.view",
+    "outreach.create",
+    "outreach.edit",
+    "outreach.launch",
+    "outreach.pause",
+    "outreach.templates",
+    "outreach.settings",
   ],
   // Can run the exporter-onboarding wizard and opportunity discovery day
   // to day, but not manage team membership or organization identity.
@@ -195,6 +216,13 @@ export const ROLE_PERMISSIONS: Record<MembershipRole, readonly Permission[]> = {
     "crm.tasks",
     "crm.attachments",
     "crm.manage",
+    "outreach.view",
+    "outreach.create",
+    "outreach.edit",
+    "outreach.launch",
+    "outreach.pause",
+    "outreach.templates",
+    "outreach.settings",
   ],
   SALES: [
     "organization.view",
@@ -222,6 +250,11 @@ export const ROLE_PERMISSIONS: Record<MembershipRole, readonly Permission[]> = {
     "crm.notes",
     "crm.tasks",
     "crm.attachments",
+    "outreach.view",
+    "outreach.create",
+    "outreach.edit",
+    "outreach.launch",
+    "outreach.templates",
   ],
   // Classification support: can run analyses, answer clarifications and
   // pre-select candidates, but confirming/saving stays with managers.
@@ -243,10 +276,11 @@ export const ROLE_PERMISSIONS: Record<MembershipRole, readonly Permission[]> = {
     "crm.view",
     "crm.notes",
     "crm.attachments",
+    "outreach.view",
   ],
-  LOGISTICS: ["organization.view", "team.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view", "products.view", "product_intelligence.view", "country_intelligence.view", "comparisons.view", "recommendations.view", "buyers.view", "crm.view"],
-  FINANCE: ["organization.view", "team.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view", "products.view", "product_intelligence.view", "country_intelligence.view", "comparisons.view", "recommendations.view", "buyers.view", "crm.view"],
-  VIEWER: ["organization.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view", "products.view", "product_intelligence.view", "country_intelligence.view", "comparisons.view", "recommendations.view", "buyers.view", "crm.view"],
+  LOGISTICS: ["organization.view", "team.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view", "products.view", "product_intelligence.view", "country_intelligence.view", "comparisons.view", "recommendations.view", "buyers.view", "crm.view", "outreach.view"],
+  FINANCE: ["organization.view", "team.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view", "products.view", "product_intelligence.view", "country_intelligence.view", "comparisons.view", "recommendations.view", "buyers.view", "crm.view", "outreach.view"],
+  VIEWER: ["organization.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view", "products.view", "product_intelligence.view", "country_intelligence.view", "comparisons.view", "recommendations.view", "buyers.view", "crm.view", "outreach.view"],
 };
 
 export function roleHasPermission(role: MembershipRole, permission: Permission): boolean {

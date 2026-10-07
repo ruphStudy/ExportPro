@@ -486,20 +486,24 @@ model Organization {
   auditLogs   AuditLog[]
   invitations OrganizationInvitation[]
 
-  exporterProfile     ExporterProfile?
-  productInterests    ProductInterest[]
-  targetCountries     TargetCountry[]
-  registrations       Registration[]
-  certifications      Certification[]
-  onboardingDocuments OnboardingDocument[]
-  savedOpportunities  SavedOpportunity[]
-  savedSearches       SavedOpportunitySearch[]
-  productAnalyses     ProductAnalysis[]
-  products            OrganizationProduct[]
-  privateBuyers       BuyerCompany[]
-  buyerStates         OrganizationBuyer[]
-  buyerLeads          BuyerLead[]
-  leadTags            LeadTag[]
+  exporterProfile      ExporterProfile?
+  productInterests     ProductInterest[]
+  targetCountries      TargetCountry[]
+  registrations        Registration[]
+  certifications       Certification[]
+  onboardingDocuments  OnboardingDocument[]
+  savedOpportunities   SavedOpportunity[]
+  savedSearches        SavedOpportunitySearch[]
+  productAnalyses      ProductAnalysis[]
+  products             OrganizationProduct[]
+  privateBuyers        BuyerCompany[]
+  buyerStates          OrganizationBuyer[]
+  buyerLeads           BuyerLead[]
+  leadTags             LeadTag[]
+  outreachSettings     OrganizationOutreachSettings?
+  outreachTemplates    OutreachTemplate[]
+  outreachCampaigns    OutreachCampaign[]
+  outreachSuppressions OutreachSuppression[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -954,10 +958,11 @@ model OrganizationProduct {
   analysisId String?
   analysis   ProductAnalysis? @relation("ProductConfirmedAnalysis", fields: [analysisId], references: [id], onDelete: SetNull)
 
-  analyses         ProductAnalysis[]   @relation("ProductAnalyses")
-  productInterests ProductInterest[]
-  buyerStates      OrganizationBuyer[]
-  buyerLeads       BuyerLead[]
+  analyses          ProductAnalysis[]   @relation("ProductAnalyses")
+  productInterests  ProductInterest[]
+  buyerStates       OrganizationBuyer[]
+  buyerLeads        BuyerLead[]
+  outreachCampaigns OutreachCampaign[]
 
   createdByUserId String
   createdAt       DateTime @default(now())
@@ -1396,13 +1401,14 @@ model BuyerCompany {
   enrichmentVersion    String?
   enrichmentExpiresAt  DateTime?
 
-  sourceRecords BuyerSourceRecord[]
-  activities    BuyerProductActivity[]
-  contacts      BuyerContact[]
-  orgStates     OrganizationBuyer[]
-  leads         BuyerLead[]
-  duplicatesA   BuyerDuplicateCandidate[] @relation("DuplicateA")
-  duplicatesB   BuyerDuplicateCandidate[] @relation("DuplicateB")
+  sourceRecords      BuyerSourceRecord[]
+  activities         BuyerProductActivity[]
+  contacts           BuyerContact[]
+  orgStates          OrganizationBuyer[]
+  leads              BuyerLead[]
+  outreachRecipients CampaignRecipient[]
+  duplicatesA        BuyerDuplicateCandidate[] @relation("DuplicateA")
+  duplicatesB        BuyerDuplicateCandidate[] @relation("DuplicateB")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1834,4 +1840,346 @@ model LeadAttachment {
 
   @@index([leadId])
   @@map("lead_attachments")
+}
+
+// --- Sprint 12: buyer outreach & campaigns --------------------------------
+
+enum OutreachChannel {
+  EMAIL
+  WHATSAPP
+  LINKEDIN_MANUAL
+  OTHER
+}
+
+enum DeliveryMode {
+  DEVELOPMENT
+  PRODUCTION
+}
+
+enum DomainStatus {
+  NOT_CONFIGURED
+  PENDING
+  VERIFIED
+  FAILED
+  DEVELOPMENT_ONLY
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  RUNNING
+  PAUSED
+  COMPLETED
+  CANCELLED
+  FAILED
+}
+
+enum OutreachMessageStatus {
+  DRAFT
+  SCHEDULED
+  QUEUED
+  SENT
+  DELIVERED
+  OPENED
+  REPLIED
+  BOUNCED
+  FAILED
+  CANCELLED
+  OPTED_OUT
+}
+
+enum RecipientStatus {
+  PENDING
+  ACTIVE
+  EXCLUDED
+  REPLIED
+  BOUNCED
+  OPTED_OUT
+  COMPLETED
+  CANCELLED
+  FAILED
+}
+
+enum ExclusionReason {
+  NO_CONTACT
+  INVALID_CONTACT
+  SUPPRESSED_UNSUBSCRIBED
+  SUPPRESSED_BOUNCE
+  SUPPRESSED_COMPLAINT
+  SUPPRESSED_MANUAL
+  DUPLICATE
+  DEMO_RECIPIENT
+  COOLDOWN
+  CAMPAIGN_LIMIT
+  UNRESOLVED_VARIABLE
+}
+
+enum OutreachTemplateType {
+  INTRODUCTION
+  CATALOG
+  QUOTATION_INTRODUCTION
+  SAMPLE_OFFER
+  FOLLOW_UP
+  CUSTOM
+}
+
+enum ContentSource {
+  TEMPLATE
+  AI
+  AI_EDITED
+  MANUAL
+}
+
+enum OutreachEventType {
+  QUEUED
+  SENT
+  DELIVERED
+  OPENED
+  CLICKED
+  BOUNCED
+  REPLIED
+  COMPLAINT
+  UNSUBSCRIBED
+  FAILED
+}
+
+enum OutreachEventSource {
+  PROVIDER
+  MANUAL
+  SYSTEM
+  DEVELOPMENT
+}
+
+enum SuppressionReason {
+  UNSUBSCRIBED
+  COMPLAINT
+  MANUAL_BLOCK
+  HARD_BOUNCE
+}
+
+/// One row per organization. Provider secrets live in env config, never here.
+model OrganizationOutreachSettings {
+  id                       String       @id @default(cuid())
+  organizationId           String       @unique
+  organization             Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  fromName                 String?
+  fromEmail                String?
+  replyTo                  String?
+  companyName              String?
+  companyWebsite           String?
+  signature                String?
+  dailyLimit               Int          @default(50)
+  maxRecipientsPerCampaign Int          @default(25)
+  maxFollowUps             Int          @default(2)
+  contactCooldownDays      Int          @default(14)
+  timezone                 String       @default("UTC")
+  enabled                  Boolean      @default(true)
+  domainStatus             DomainStatus @default(NOT_CONFIGURED)
+  domainCheckedAt          DateTime?
+  domainMessage            String?
+  createdAt                DateTime     @default(now())
+  updatedAt                DateTime     @updatedAt
+
+  @@map("organization_outreach_settings")
+}
+
+/// organizationId null = system starter template (read-only; duplicate to edit).
+model OutreachTemplate {
+  id              String               @id @default(cuid())
+  organizationId  String?
+  organization    Organization?        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name            String
+  type            OutreachTemplateType
+  subject         String
+  body            String
+  language        String               @default("en")
+  variables       String[]
+  active          Boolean              @default(true)
+  version         Int                  @default(1)
+  createdByUserId String?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  @@index([organizationId, active])
+  @@map("outreach_templates")
+}
+
+model OutreachCampaign {
+  id                 String               @id @default(cuid())
+  organizationId     String
+  organization       Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name               String
+  productId          String?
+  product            OrganizationProduct? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  countryCode        String?
+  channel            OutreachChannel      @default(EMAIL)
+  status             CampaignStatus       @default(DRAFT)
+  templateId         String?
+  /// Template version copied at the time content was taken from it.
+  templateVersion    Int?
+  subject            String               @default("")
+  messageBody        String               @default("")
+  language           String               @default("en")
+  contentSource      ContentSource        @default(MANUAL)
+  generationProvider String?
+  generatedAt        DateTime?
+  sendMode           String               @default("NOW")
+  scheduledAt        DateTime?
+  timezone           String               @default("UTC")
+  /// Snapshot at launch: provider + mode used for every message in this campaign.
+  deliveryMode       DeliveryMode?
+  provider           String?
+  fromName           String?
+  fromEmail          String?
+  replyTo            String?
+  signature          String?
+  companyName        String?
+  companyWebsite     String?
+  audienceCount      Int                  @default(0)
+  createdByUserId    String
+  launchedByUserId   String?
+  launchedAt         DateTime?
+  pausedAt           DateTime?
+  completedAt        DateTime?
+  cancelledAt        DateTime?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  steps      CampaignStep[]
+  recipients CampaignRecipient[]
+  messages   OutreachMessage[]
+
+  @@index([organizationId, status])
+  @@index([organizationId, createdAt])
+  @@map("outreach_campaigns")
+}
+
+/// Step 0 = initial message; 1..3 = follow-ups (delay after the previous send).
+/// Content is locked once the campaign leaves DRAFT.
+model CampaignStep {
+  id         String           @id @default(cuid())
+  campaignId String
+  campaign   OutreachCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  order      Int
+  delayDays  Int              @default(0)
+  subject    String
+  body       String
+  active     Boolean          @default(true)
+
+  @@unique([campaignId, order])
+  @@map("outreach_campaign_steps")
+}
+
+model CampaignRecipient {
+  id               String           @id @default(cuid())
+  organizationId   String
+  campaignId       String
+  campaign         OutreachCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  buyerCompanyId   String
+  buyerCompany     BuyerCompany     @relation(fields: [buyerCompanyId], references: [id], onDelete: Cascade)
+  contactId        String?
+  crmLeadId        String?
+  /// Snapshots taken when the recipient was resolved / at launch.
+  address          String?
+  contactName      String?
+  personalization  Json?
+  isDemo           Boolean          @default(false)
+  status           RecipientStatus  @default(PENDING)
+  excludedReason   ExclusionReason?
+  warnings         String[]
+  interested       Boolean          @default(false)
+  interestedAt     DateTime?
+  /// Opaque random token for the public unsubscribe link.
+  unsubscribeToken String           @unique
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  messages OutreachMessage[]
+
+  @@unique([campaignId, buyerCompanyId])
+  @@index([campaignId, status])
+  @@index([organizationId, buyerCompanyId])
+  @@index([crmLeadId])
+  @@map("outreach_campaign_recipients")
+}
+
+model OutreachMessage {
+  id                String                @id @default(cuid())
+  organizationId    String
+  campaignId        String?
+  campaign          OutreachCampaign?     @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  recipientId       String?
+  recipient         CampaignRecipient?    @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+  buyerCompanyId    String?
+  crmLeadId         String?
+  channel           OutreachChannel       @default(EMAIL)
+  direction         String                @default("OUTBOUND")
+  stepOrder         Int                   @default(0)
+  /// recipientId:stepOrder (or test:<uuid>) — one message per step per recipient.
+  idempotencyKey    String                @unique
+  toAddress         String
+  fromAddress       String?
+  subject           String
+  body              String
+  provider          String
+  providerMessageId String?
+  simulated         Boolean               @default(false)
+  testSend          Boolean               @default(false)
+  status            OutreachMessageStatus @default(SCHEDULED)
+  scheduledAt       DateTime?
+  attempts          Int                   @default(0)
+  lockedAt          DateTime?
+  lastError         String?
+  sentAt            DateTime?
+  deliveredAt       DateTime?
+  openedAt          DateTime?
+  repliedAt         DateTime?
+  bouncedAt         DateTime?
+  failedAt          DateTime?
+  metadata          Json?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+
+  events OutreachMessageEvent[]
+
+  @@index([status, scheduledAt])
+  @@index([organizationId, createdAt])
+  @@index([organizationId, toAddress])
+  @@index([providerMessageId])
+  @@index([buyerCompanyId])
+  @@index([crmLeadId])
+  @@map("outreach_messages")
+}
+
+model OutreachMessageEvent {
+  id              String              @id @default(cuid())
+  organizationId  String
+  messageId       String
+  message         OutreachMessage     @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  type            OutreachEventType
+  source          OutreachEventSource
+  provider        String?
+  providerEventId String?
+  occurredAt      DateTime            @default(now())
+  metadata        Json?
+  createdAt       DateTime            @default(now())
+
+  @@unique([provider, providerEventId])
+  @@index([messageId])
+  @@map("outreach_message_events")
+}
+
+model OutreachSuppression {
+  id             String            @id @default(cuid())
+  organizationId String
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  /// Lowercased email address.
+  address        String
+  buyerCompanyId String?
+  reason         SuppressionReason
+  source         String
+  createdAt      DateTime          @default(now())
+
+  @@unique([organizationId, address])
+  @@map("outreach_suppressions")
 }

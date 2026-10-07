@@ -15,3 +15,4 @@ export * from "./comparisons";
 export * from "./trade-data";
 export * from "./buyers";
 export * from "./crm";
+export * from "./outreach";
