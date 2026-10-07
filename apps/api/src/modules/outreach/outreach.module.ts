@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { AppConfig } from '../../config/configuration';
 import { AuditModule } from '../audit/audit.module';
+import { InquiriesModule } from '../inquiries/inquiries.module';
 import { OutreachEventsService } from './outreach-events.service';
 import { OutreachProcessorService } from './outreach-processor.service';
 import {
@@ -18,7 +19,8 @@ import { createOutreachProvider } from './providers/provider.factory';
 
 /** Sprint 12 buyer outreach & campaign automation (campaign-local, not a global automation engine). */
 @Module({
-  imports: [AuditModule],
+  // InquiriesModule: recorded buyer replies become inquiries (Sprint 13).
+  imports: [AuditModule, InquiriesModule],
   controllers: [OutreachController, OutreachPublicController],
   providers: [
     OutreachService,

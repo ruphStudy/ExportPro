@@ -17,3 +17,4 @@ export * from "./buyers";
 export * from "./crm";
 export * from "./outreach";
 export * from "./costing";
+export * from "./inquiries";

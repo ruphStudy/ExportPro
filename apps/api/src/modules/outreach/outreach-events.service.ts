@@ -7,6 +7,7 @@ import type {
   SuppressionReason,
 } from '@exportpro/types';
 import { PrismaService } from '../../prisma/prisma.service';
+import { InquiryIntakeService } from '../inquiries/inquiry-intake.service';
 import { normalizeAddress, SUPPRESSION_EXCLUSION } from './outreach-rules';
 import type { NormalizedProviderEvent } from './providers/outreach-provider';
 
@@ -33,7 +34,10 @@ const RANK: Record<OutreachMessageStatus, number> = {
  */
 @Injectable()
 export class OutreachEventsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly intake: InquiryIntakeService,
+  ) {}
 
   /** Stop-on-reply / bounce / opt-out / cancel: no further sends for this recipient. */
   async stopRecipient(db: Db, recipientId: string, status: RecipientStatus) {
@@ -226,6 +230,14 @@ export class OutreachEventsService {
         }
         // Soft (transient) bounces: recorded only — the provider retries itself; we never loop.
       });
+      // Sprint 13: a provider-reported reply opens a NEW inquiry (deduplicated per message).
+      if (e.type === 'REPLIED')
+        await this.intake.fromOutreachReply(
+          m.organizationId,
+          m.id,
+          null,
+          typeof e.metadata.text === 'string' ? e.metadata.text : null,
+        );
       return 'applied';
     } catch (err) {
       if (

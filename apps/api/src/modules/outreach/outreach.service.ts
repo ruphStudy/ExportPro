@@ -42,6 +42,7 @@ import {
 import type { AppConfig } from '../../config/configuration';
 import { buildPaginationMeta } from '../../common/utils/pagination.util';
 import { PrismaService } from '../../prisma/prisma.service';
+import { InquiryIntakeService } from '../inquiries/inquiry-intake.service';
 import { AuditService } from '../audit/audit.service';
 import { riskLevel } from '../buyers/buyer-scoring';
 import { sanitizeText } from '../buyers/buyer-normalization';
@@ -132,6 +133,7 @@ export class OutreachService {
     @Inject(OUTREACH_PROVIDER) private readonly provider: OutreachProvider,
     @Inject(OUTREACH_CONTENT_PROVIDER)
     private readonly content: OutreachContentProvider,
+    private readonly intake: InquiryIntakeService,
   ) {}
 
   // ============================================================ provider
@@ -1955,7 +1957,7 @@ export class OutreachService {
    * Manual reply recording (the provider has no inbound reply signal).
    * Stops all follow-ups immediately and is labelled MANUAL everywhere.
    */
-  async markReplied(a: Actor, recipientId: string) {
+  async markReplied(a: Actor, recipientId: string, replyText?: string) {
     const r = await this.findRecipient(a.organizationId, recipientId);
     const m = await this.prisma.outreachMessage.findFirst({
       where: { recipientId, testSend: false, sentAt: { not: null } },
@@ -1988,6 +1990,13 @@ export class OutreachService {
         actorUserId: a.userId,
       });
     });
+    // Sprint 13: the reply becomes a NEW, unread inquiry (idempotent per message, never auto-qualified).
+    await this.intake.fromOutreachReply(
+      a.organizationId,
+      m.id,
+      a.userId,
+      replyText,
+    );
     return this.recipientView(a.organizationId, r.campaignId, recipientId);
   }
 

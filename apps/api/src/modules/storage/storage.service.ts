@@ -38,6 +38,14 @@ export const LEAD_ATTACHMENT_EXTENSIONS: Record<string, string[]> = {
   ],
 };
 export const MAX_LEAD_ATTACHMENT_BYTES = 10 * 1024 * 1024; // 10MB
+
+/** Buyer inquiry / RFQ attachments: lead types plus legacy Excel and saved emails. No executables. */
+export const INQUIRY_ATTACHMENT_EXTENSIONS: Record<string, string[]> = {
+  ...LEAD_ATTACHMENT_EXTENSIONS,
+  'application/vnd.ms-excel': ['.xls'],
+  'message/rfc822': ['.eml'],
+};
+export const MAX_INQUIRY_ATTACHMENT_BYTES = 10 * 1024 * 1024; // 10MB
 const PRIVATE_KEY_RE = /^private:([a-z-]+)\/([0-9a-f-]{36}\.[a-z0-9]+)$/;
 const EXTENSION_BY_MIME: Record<string, string> = {
   'image/png': 'png',
@@ -140,7 +148,7 @@ export class StorageService {
    * privately. Returns an opaque key — never a disk path or public URL.
    */
   async savePrivateFile(
-    folder: 'lead-attachments',
+    folder: 'lead-attachments' | 'inquiry-attachments',
     file: Express.Multer.File,
     allowed: Record<string, string[]>,
     maxSizeBytes: number,

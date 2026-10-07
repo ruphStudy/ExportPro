@@ -506,6 +506,7 @@ model Organization {
   outreachSuppressions OutreachSuppression[]
   exportCostings       ExportCosting[]
   fxRateSnapshots      FxRateSnapshot[]
+  inquiries            BuyerInquiry[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -965,6 +966,7 @@ model OrganizationProduct {
   buyerStates       OrganizationBuyer[]
   buyerLeads        BuyerLead[]
   exportCostings    ExportCosting[]
+  inquiryItems      InquiryItem[]
   outreachCampaigns OutreachCampaign[]
 
   createdByUserId String
@@ -1410,6 +1412,7 @@ model BuyerCompany {
   orgStates          OrganizationBuyer[]
   leads              BuyerLead[]
   exportCostings     ExportCosting[]
+  inquiries          BuyerInquiry[]
   outreachRecipients CampaignRecipient[]
   duplicatesA        BuyerDuplicateCandidate[] @relation("DuplicateA")
   duplicatesB        BuyerDuplicateCandidate[] @relation("DuplicateB")
@@ -1606,6 +1609,7 @@ model BuyerLead {
   tags         LeadTagAssignment[]
   attachments  LeadAttachment[]
   costings     ExportCosting[]
+  inquiries    BuyerInquiry[]
 
   @@unique([organizationId, buyerCompanyId, contextKey])
   @@index([organizationId])
@@ -2456,4 +2460,272 @@ model CostingSnapshot {
 
   @@index([costingId])
   @@map("costing_snapshots")
+}
+
+// --- Sprint 13: buyer inquiry / RFQ management --------------------------
+
+enum InquirySource {
+  EMAIL_REPLY
+  MANUAL
+  RFQ_UPLOAD
+  CRM
+  OTHER
+}
+
+enum InquiryStatus {
+  NEW
+  REVIEWING
+  NEEDS_CLARIFICATION
+  QUALIFIED
+  REJECTED
+  ARCHIVED
+  CONVERTED
+}
+
+enum InquiryPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum InquiryExtractionStatus {
+  NOT_STARTED
+  PROCESSING
+  COMPLETED
+  NEEDS_REVIEW
+  FAILED
+}
+
+enum InquiryApprovalStatus {
+  NOT_REQUIRED
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum InquiryRejectCategory {
+  NOT_RELEVANT
+  PRODUCT_UNAVAILABLE
+  COMMERCIAL_MISMATCH
+  BUYER_RISK
+  INCOMPLETE_REQUIREMENT
+  OTHER
+}
+
+/// Organization-scoped inbound buyer inquiry. `body` is sanitized plain text
+/// (BUYER_PROVIDED); raw HTML, when supplied, is kept in rawBody and never rendered.
+model BuyerInquiry {
+  id                   String                  @id @default(cuid())
+  organizationId       String
+  organization         Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  reference            String
+  source               InquirySource
+  /// Dedup key for automatic sources (e.g. outreach:<messageId>); unique per organization.
+  sourceKey            String?
+  /// OutreachMessage id for EMAIL_REPLY inquiries (reference only, content not duplicated).
+  sourceMessageId      String?
+  buyerCompanyId       String?
+  buyerCompany         BuyerCompany?           @relation(fields: [buyerCompanyId], references: [id], onDelete: SetNull)
+  buyerName            String?
+  buyerContactId       String?
+  contactEmail         String?
+  contactName          String?
+  crmLeadId            String?
+  crmLead              BuyerLead?              @relation(fields: [crmLeadId], references: [id], onDelete: SetNull)
+  productId            String?
+  countryCode          String?
+  subject              String
+  body                 String
+  rawBody              String?
+  bodyWasHtml          Boolean                 @default(false)
+  receivedAt           DateTime
+  priority             InquiryPriority         @default(MEDIUM)
+  suggestedPriority    InquiryPriority?
+  priorityReasons      String[]
+  status               InquiryStatus           @default(NEW)
+  previousStatus       InquiryStatus?
+  unread               Boolean                 @default(true)
+  assignedToUserId     String?
+  extractionStatus     InquiryExtractionStatus @default(NOT_STARTED)
+  isRfq                Boolean                 @default(false)
+  approvalStatus       InquiryApprovalStatus   @default(NOT_REQUIRED)
+  qualification        Json?
+  clarification        Json?
+  /// Edited-but-unconfirmed RFQ (USER review draft); never treated as confirmed.
+  reviewDraft          Json?
+  reviewDraftAt        DateTime?
+  reviewDraftByUserId  String?
+  confirmedRfq         Json?
+  confirmedAt          DateTime?
+  confirmedByUserId    String?
+  confirmedFromVersion Int?
+  rejectCategory       InquiryRejectCategory?
+  rejectReason         String?
+  rejectedAt           DateTime?
+  rejectedByUserId     String?
+  archivedAt           DateTime?
+  rowVersion           Int                     @default(0)
+  createdByUserId      String?
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+
+  attachments      InquiryAttachment[]
+  extractions      InquiryExtraction[]
+  items            InquiryItem[]
+  activities       InquiryActivity[]
+  approvals        InquiryApproval[]
+  quotationRequest QuotationRequest?
+  sampleRequest    SampleRequest?
+
+  @@unique([organizationId, reference])
+  @@unique([organizationId, sourceKey])
+  @@index([organizationId, status, receivedAt])
+  @@index([organizationId, unread])
+  @@index([organizationId, assignedToUserId])
+  @@index([organizationId, priority])
+  @@index([organizationId, source])
+  @@index([buyerCompanyId])
+  @@index([crmLeadId])
+  @@map("buyer_inquiries")
+}
+
+model InquiryAttachment {
+  id               String       @id @default(cuid())
+  organizationId   String
+  inquiryId        String
+  inquiry          BuyerInquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  originalFilename String
+  storageKey       String
+  mimeType         String
+  sizeBytes        Int
+  checksum         String
+  /// Text for text-based files only (txt/csv); null = text extraction not available.
+  extractedText    String?
+  uploadedByUserId String?
+  createdAt        DateTime     @default(now())
+  deletedAt        DateTime?
+
+  @@index([inquiryId])
+  @@index([organizationId, checksum])
+  @@map("inquiry_attachments")
+}
+
+/// Every AI (or dev rule-based) extraction run is kept; re-runs add a new version.
+model InquiryExtraction {
+  id                 String       @id @default(cuid())
+  organizationId     String
+  inquiryId          String
+  inquiry            BuyerInquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  version            Int
+  status             String
+  provider           String
+  model              String?
+  promptVersion      String
+  provenance         String
+  overallConfidence  Int?
+  data               Json?
+  invalidFields      String[]
+  error              String?
+  attachmentsUsed    String[]
+  attachmentsSkipped Json?
+  createdByUserId    String?
+  createdAt          DateTime     @default(now())
+
+  @@unique([inquiryId, version])
+  @@map("inquiry_extractions")
+}
+
+/// Human-confirmed RFQ line items (USER_CONFIRMED) — one row per product.
+model InquiryItem {
+  id              String               @id @default(cuid())
+  organizationId  String
+  inquiryId       String
+  inquiry         BuyerInquiry         @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  sortOrder       Int                  @default(0)
+  productName     String
+  productId       String?
+  product         OrganizationProduct? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  hsCode          String?
+  quantity        Decimal?             @db.Decimal(20, 4)
+  quantityUnit    String?
+  quantityText    String?
+  specification   String?
+  packaging       String?
+  targetPrice     Decimal?             @db.Decimal(20, 6)
+  priceCurrency   String?
+  priceUnitBasis  String?
+  priceIndicative Boolean              @default(false)
+  deliveryDate    String?
+
+  @@index([inquiryId])
+  @@index([organizationId, productId])
+  @@map("inquiry_items")
+}
+
+/// Business timeline of an inquiry (separate from the security AuditLog).
+model InquiryActivity {
+  id             String       @id @default(cuid())
+  organizationId String
+  inquiryId      String
+  inquiry        BuyerInquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  type           String
+  title          String
+  metadata       Json?
+  actorUserId    String?
+  createdAt      DateTime     @default(now())
+
+  @@index([inquiryId, createdAt])
+  @@map("inquiry_activities")
+}
+
+model InquiryApproval {
+  id             String       @id @default(cuid())
+  organizationId String
+  inquiryId      String
+  inquiry        BuyerInquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  action         String
+  reason         String?
+  actorUserId    String
+  createdAt      DateTime     @default(now())
+
+  @@index([inquiryId])
+  @@map("inquiry_approvals")
+}
+
+/// Sprint 15 handoff only — no quotation document, number or pricing.
+model QuotationRequest {
+  id                String       @id @default(cuid())
+  organizationId    String
+  inquiryId         String       @unique
+  inquiry           BuyerInquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  crmLeadId         String?
+  buyerCompanyId    String?
+  items             Json
+  status            String       @default("PENDING")
+  requestedByUserId String
+  createdAt         DateTime     @default(now())
+
+  @@index([organizationId])
+  @@map("quotation_requests")
+}
+
+/// Sprint 22 handoff only — no preparation, courier or tracking workflow.
+model SampleRequest {
+  id                String       @id @default(cuid())
+  organizationId    String
+  inquiryId         String       @unique
+  inquiry           BuyerInquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  buyerCompanyId    String?
+  productName       String?
+  productId         String?
+  quantity          String?
+  specification     String?
+  deadline          String?
+  status            String       @default("PENDING")
+  requestedByUserId String
+  createdAt         DateTime     @default(now())
+
+  @@index([organizationId])
+  @@map("sample_requests")
 }

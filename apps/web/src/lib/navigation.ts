@@ -114,8 +114,9 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Inquiries & RFQs",
     href: "/inquiries",
     icon: Inbox,
-    status: "placeholder",
-    description: "Manage inbound and outbound inquiries.",
+    status: "active",
+    permission: "inquiries.view",
+    description: "Buyer inquiries and RFQs: extraction, review, qualification and handoffs.",
   },
   {
     label: "Export Costing",

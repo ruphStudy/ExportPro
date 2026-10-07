@@ -63,6 +63,14 @@ export const PERMISSIONS = [
   "costing.calculate",
   "costing.ready",
   "costing.lock",
+  "inquiries.view",
+  "inquiries.create",
+  "inquiries.edit",
+  "inquiries.assign",
+  "inquiries.qualify",
+  "inquiries.approve",
+  "inquiries.archive",
+  "inquiries.create_handoff",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -137,6 +145,14 @@ export const ROLE_PERMISSIONS: Record<MembershipRole, readonly Permission[]> = {
     "costing.calculate",
     "costing.ready",
     "costing.lock",
+    "inquiries.view",
+    "inquiries.create",
+    "inquiries.edit",
+    "inquiries.assign",
+    "inquiries.qualify",
+    "inquiries.approve",
+    "inquiries.archive",
+    "inquiries.create_handoff",
   ],
   // Same as OWNER except owner-only destructive actions (transfer
   // ownership, delete organization) are enforced by explicit role
@@ -199,6 +215,14 @@ export const ROLE_PERMISSIONS: Record<MembershipRole, readonly Permission[]> = {
     "costing.calculate",
     "costing.ready",
     "costing.lock",
+    "inquiries.view",
+    "inquiries.create",
+    "inquiries.edit",
+    "inquiries.assign",
+    "inquiries.qualify",
+    "inquiries.approve",
+    "inquiries.archive",
+    "inquiries.create_handoff",
   ],
   // Can run the exporter-onboarding wizard and opportunity discovery day
   // to day, but not manage team membership or organization identity.
@@ -251,6 +275,14 @@ export const ROLE_PERMISSIONS: Record<MembershipRole, readonly Permission[]> = {
     "costing.calculate",
     "costing.ready",
     "costing.lock",
+    "inquiries.view",
+    "inquiries.create",
+    "inquiries.edit",
+    "inquiries.assign",
+    "inquiries.qualify",
+    "inquiries.approve",
+    "inquiries.archive",
+    "inquiries.create_handoff",
   ],
   SALES: [
     "organization.view",
@@ -287,6 +319,12 @@ export const ROLE_PERMISSIONS: Record<MembershipRole, readonly Permission[]> = {
     "costing.create",
     "costing.edit",
     "costing.calculate",
+    "inquiries.view",
+    "inquiries.create",
+    "inquiries.edit",
+    "inquiries.assign",
+    "inquiries.qualify",
+    "inquiries.create_handoff",
   ],
   // Classification support: can run analyses, answer clarifications and
   // pre-select candidates, but confirming/saving stays with managers.
@@ -310,10 +348,12 @@ export const ROLE_PERMISSIONS: Record<MembershipRole, readonly Permission[]> = {
     "crm.attachments",
     "outreach.view",
     "costing.view",
+    "inquiries.view",
+    "inquiries.edit",
   ],
-  LOGISTICS: ["organization.view", "team.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view", "products.view", "product_intelligence.view", "country_intelligence.view", "comparisons.view", "recommendations.view", "buyers.view", "crm.view", "outreach.view", "costing.view", "costing.edit_logistics", "costing.calculate"],
-  FINANCE: ["organization.view", "team.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view", "products.view", "product_intelligence.view", "country_intelligence.view", "comparisons.view", "recommendations.view", "buyers.view", "crm.view", "outreach.view", "costing.view", "costing.create", "costing.edit", "costing.calculate", "costing.ready"],
-  VIEWER: ["organization.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view", "products.view", "product_intelligence.view", "country_intelligence.view", "comparisons.view", "recommendations.view", "buyers.view", "crm.view", "outreach.view", "costing.view"],
+  LOGISTICS: ["organization.view", "team.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view", "products.view", "product_intelligence.view", "country_intelligence.view", "comparisons.view", "recommendations.view", "buyers.view", "crm.view", "outreach.view", "costing.view", "costing.edit_logistics", "costing.calculate", "inquiries.view"],
+  FINANCE: ["organization.view", "team.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view", "products.view", "product_intelligence.view", "country_intelligence.view", "comparisons.view", "recommendations.view", "buyers.view", "crm.view", "outreach.view", "costing.view", "costing.create", "costing.edit", "costing.calculate", "costing.ready", "inquiries.view"],
+  VIEWER: ["organization.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view", "products.view", "product_intelligence.view", "country_intelligence.view", "comparisons.view", "recommendations.view", "buyers.view", "crm.view", "outreach.view", "costing.view", "inquiries.view"],
 };
 
 export function roleHasPermission(role: MembershipRole, permission: Permission): boolean {

@@ -29,6 +29,7 @@ import {
   CreateCampaignDto,
   GenerateDto,
   InterestedDto,
+  RepliedDto,
   LaunchDto,
   MessageQueryDto,
   PreviewDto,
@@ -237,8 +238,12 @@ export class OutreachController {
   @RequirePermission('outreach.edit')
   @HttpCode(HttpStatus.OK)
   @Post('recipients/:id/replied')
-  replied(@Req() req: Request, @Param('id') id: string) {
-    return this.outreach.markReplied(this.actor(req), id);
+  replied(
+    @Req() req: Request,
+    @Param('id') id: string,
+    @Body() dto: RepliedDto,
+  ) {
+    return this.outreach.markReplied(this.actor(req), id, dto.replyText);
   }
 
   @RequirePermission('outreach.edit')

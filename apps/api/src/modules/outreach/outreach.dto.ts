@@ -239,6 +239,11 @@ export class MessageQueryDto extends PageQueryDto {
   @IsOptional() @IsDateString() to?: string;
 }
 
+/** Optional pasted reply text when recording a reply manually (becomes the inquiry body). */
+export class RepliedDto {
+  @IsOptional() @IsString() @MaxLength(100_000) replyText?: string;
+}
+
 export class InterestedDto {
   @IsBoolean() interested: boolean;
 }
