@@ -486,37 +486,42 @@ model Organization {
   auditLogs   AuditLog[]
   invitations OrganizationInvitation[]
 
-  exporterProfile      ExporterProfile?
-  productInterests     ProductInterest[]
-  targetCountries      TargetCountry[]
-  registrations        Registration[]
-  certifications       Certification[]
-  onboardingDocuments  OnboardingDocument[]
-  savedOpportunities   SavedOpportunity[]
-  savedSearches        SavedOpportunitySearch[]
-  productAnalyses      ProductAnalysis[]
-  products             OrganizationProduct[]
-  privateBuyers        BuyerCompany[]
-  buyerStates          OrganizationBuyer[]
-  buyerLeads           BuyerLead[]
-  leadTags             LeadTag[]
-  outreachSettings     OrganizationOutreachSettings?
-  outreachTemplates    OutreachTemplate[]
-  outreachCampaigns    OutreachCampaign[]
-  outreachSuppressions OutreachSuppression[]
-  exportCostings       ExportCosting[]
-  fxRateSnapshots      FxRateSnapshot[]
-  inquiries            BuyerInquiry[]
-  commercialSettings   CommercialSettings?
-  complianceRules      ComplianceRule[]
-  complianceChecklists ComplianceChecklist[]
-  tradeDocuments       TradeDocument[]
-  documentTemplates    DocumentTemplate[]
-  documentExtractions  DocumentExtraction[]
+  exporterProfile        ExporterProfile?
+  productInterests       ProductInterest[]
+  targetCountries        TargetCountry[]
+  registrations          Registration[]
+  certifications         Certification[]
+  onboardingDocuments    OnboardingDocument[]
+  savedOpportunities     SavedOpportunity[]
+  savedSearches          SavedOpportunitySearch[]
+  productAnalyses        ProductAnalysis[]
+  products               OrganizationProduct[]
+  privateBuyers          BuyerCompany[]
+  buyerStates            OrganizationBuyer[]
+  buyerLeads             BuyerLead[]
+  leadTags               LeadTag[]
+  outreachSettings       OrganizationOutreachSettings?
+  outreachTemplates      OutreachTemplate[]
+  outreachCampaigns      OutreachCampaign[]
+  outreachSuppressions   OutreachSuppression[]
+  exportCostings         ExportCosting[]
+  fxRateSnapshots        FxRateSnapshot[]
+  inquiries              BuyerInquiry[]
+  commercialSettings     CommercialSettings?
+  complianceRules        ComplianceRule[]
+  complianceChecklists   ComplianceChecklist[]
+  tradeDocuments         TradeDocument[]
+  documentTemplates      DocumentTemplate[]
+  documentExtractions    DocumentExtraction[]
   documentValidationRuns DocumentValidationRun[]
-  quotations           Quotation[]
-  proformaInvoices     ProformaInvoice[]
-  purchaseOrders       BuyerPurchaseOrder[]
+  logisticsProviders     LogisticsProvider[]
+  freightRequests        FreightRequest[]
+  freightQuotes          FreightQuote[]
+  shipments              Shipment[]
+  logisticsSettings      LogisticsSettings?
+  quotations             Quotation[]
+  proformaInvoices       ProformaInvoice[]
+  purchaseOrders         BuyerPurchaseOrder[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -3174,27 +3179,27 @@ model ComplianceRule {
 /// One compliance checklist per transaction anchor: an accepted buyer PO, or
 /// (provisional) a quotation before a PO exists.
 model ComplianceChecklist {
-  id              String       @id @default(cuid())
-  organizationId  String
-  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  purchaseOrderId String?      @unique
-  quotationId     String?      @unique
-  provisional     Boolean      @default(false)
+  id                String       @id @default(cuid())
+  organizationId    String
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  purchaseOrderId   String?      @unique
+  quotationId       String?      @unique
+  provisional       Boolean      @default(false)
   /// Inputs used for the last evaluation (destination, HS codes, Incoterm …).
-  context         Json
-  coverage        Json
-  readiness       String       @default("NOT_READY")
-  evaluatedAt     DateTime     @default(now())
+  context           Json
+  coverage          Json
+  readiness         String       @default("NOT_READY")
+  evaluatedAt       DateTime     @default(now())
   evaluatedByUserId String?
-  readyReadiness  String?
-  readyAt         DateTime?
-  readyByUserId   String?
-  readyNote       String?
+  readyReadiness    String?
+  readyAt           DateTime?
+  readyByUserId     String?
+  readyNote         String?
   /// Rule ids/versions, statuses and document refs at "Mark compliance ready".
-  readySnapshot   Json?
-  rowVersion      Int          @default(0)
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  readySnapshot     Json?
+  rowVersion        Int          @default(0)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
 
   requirements ComplianceRequirementInstance[]
 
@@ -3291,8 +3296,8 @@ model TradeDocument {
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
 
-  extractions    DocumentExtraction[]
-  confirmedData  DocumentConfirmedData[]
+  extractions   DocumentExtraction[]
+  confirmedData DocumentConfirmedData[]
 
   @@unique([organizationId, documentType, documentNumber, version])
   @@index([organizationId, documentType])
@@ -3385,33 +3390,33 @@ model DocumentConfirmedData {
 
 /// One deterministic validation run (document-level or whole PO package). Never rewritten.
 model DocumentValidationRun {
-  id                 String       @id @default(cuid())
-  organizationId     String
-  organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  runNumber          Int
-  scope              String
-  purchaseOrderId    String?
-  primaryDocumentId  String?
-  documentIds        String[]     @default([])
+  id                        String       @id @default(cuid())
+  organizationId            String
+  organization              Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  runNumber                 Int
+  scope                     String
+  purchaseOrderId           String?
+  primaryDocumentId         String?
+  documentIds               String[]     @default([])
   /// Documents/versions/data sources used and comparison pairs.
-  documents          Json
-  ruleVersion        String
-  status             String
-  resultSummary      Json
-  errorCount         Int          @default(0)
-  warningCount       Int          @default(0)
-  infoCount          Int          @default(0)
-  createdByUserId    String
-  createdAt          DateTime     @default(now())
-  signedOffByUserId  String?
-  signedOffAt        DateTime?
-  signoffNote        String?
-  signoffUnresolvedWarnings  Int?
-  signoffUnresolvedCritical  Int?
-  signoffOverrideReason      String?
-  rejectedByUserId   String?
-  rejectedAt         DateTime?
-  rejectionReason    String?
+  documents                 Json
+  ruleVersion               String
+  status                    String
+  resultSummary             Json
+  errorCount                Int          @default(0)
+  warningCount              Int          @default(0)
+  infoCount                 Int          @default(0)
+  createdByUserId           String
+  createdAt                 DateTime     @default(now())
+  signedOffByUserId         String?
+  signedOffAt               DateTime?
+  signoffNote               String?
+  signoffUnresolvedWarnings Int?
+  signoffUnresolvedCritical Int?
+  signoffOverrideReason     String?
+  rejectedByUserId          String?
+  rejectedAt                DateTime?
+  rejectionReason           String?
 
   findings DocumentValidationFinding[]
   comments DocumentValidationComment[]
@@ -3469,4 +3474,417 @@ model DocumentValidationComment {
 
   @@index([runId])
   @@map("document_validation_comments")
+}
+
+// --- Sprint 18: logistics & shipment management -------------------------
+// Freight request ≠ freight quote ≠ shipment ≠ leg ≠ tracking event ≠ exception ≠ claim ≠ buyer update.
+
+model LogisticsSettings {
+  id                    String       @id @default(cuid())
+  organizationId        String       @unique
+  organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  etaDelayWarningDays   Int          @default(2)
+  etaDelayCriticalDays  Int          @default(7)
+  autoDraftBuyerUpdates Boolean      @default(true)
+  buyerUpdateMode       String       @default("REQUIRE_APPROVAL")
+  updatedAt             DateTime     @updatedAt @db.Timestamptz(3)
+
+  @@map("logistics_settings")
+}
+
+/// Freight forwarder / carrier contact (not a supplier-management system).
+model LogisticsProvider {
+  id             String         @id @default(cuid())
+  organizationId String
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  nameKey        String
+  company        String?
+  contactPerson  String?
+  email          String?
+  phone          String?
+  notes          String?
+  createdAt      DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime       @updatedAt @db.Timestamptz(3)
+  quotes         FreightQuote[]
+
+  @@unique([organizationId, nameKey])
+  @@map("logistics_providers")
+}
+
+model FreightRequest {
+  id                 String         @id @default(cuid())
+  organizationId     String
+  organization       Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  reference          String
+  purchaseOrderId    String?
+  transportMode      String
+  shipmentType       String?
+  origin             String?
+  destination        String?
+  portOfLoading      String?
+  portOfDischarge    String?
+  incoterm           String?
+  cargoDescription   String?
+  packageCount       Int?
+  grossWeightKg      Decimal?       @db.Decimal(14, 3)
+  netWeightKg        Decimal?       @db.Decimal(14, 3)
+  volumeCbm          Decimal?       @db.Decimal(14, 3)
+  readyDate          DateTime?      @db.Timestamptz(3)
+  preferredDeparture DateTime?      @db.Timestamptz(3)
+  specialHandling    String?
+  /// Field → origin (PACKING_LIST, PURCHASE_ORDER, MANUAL …).
+  sources            Json
+  createdByUserId    String
+  createdAt          DateTime       @default(now()) @db.Timestamptz(3)
+  quotes             FreightQuote[]
+
+  @@index([organizationId, purchaseOrderId])
+  @@map("freight_requests")
+}
+
+model FreightQuote {
+  id                 String               @id @default(cuid())
+  organizationId     String
+  organization       Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  requestId          String?
+  request            FreightRequest?      @relation(fields: [requestId], references: [id], onDelete: SetNull)
+  purchaseOrderId    String?
+  quotationId        String?
+  providerId         String?
+  provider           LogisticsProvider?   @relation(fields: [providerId], references: [id], onDelete: SetNull)
+  forwarderName      String
+  shippingLine       String?
+  carrier            String?
+  serviceName        String?
+  quoteReference     String?
+  transportMode      String
+  shipmentType       String?
+  containerSummary   String?
+  origin             String?
+  destination        String?
+  portOfLoading      String?
+  portOfDischarge    String?
+  routeSummary       String?
+  transshipmentPorts String[]             @default([])
+  currency           String
+  totalCost          Decimal?             @db.Decimal(20, 2)
+  transitDays        Int?
+  freeDays           Int?
+  validityFrom       DateTime?            @db.Timestamptz(3)
+  validityUntil      DateTime?            @db.Timestamptz(3)
+  departureDate      DateTime?            @db.Timestamptz(3)
+  arrivalDate        DateTime?            @db.Timestamptz(3)
+  inclusions         String?
+  exclusions         String?
+  terms              String?
+  riskNotes          String?
+  source             String               @default("MANUAL")
+  status             String
+  selectedByUserId   String?
+  selectedAt         DateTime?            @db.Timestamptz(3)
+  selectionNote      String?
+  overrideReason     String?
+  rejectionReason    String?
+  rowVersion         Int                  @default(0)
+  createdByUserId    String
+  createdAt          DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime             @updatedAt @db.Timestamptz(3)
+  charges            FreightQuoteCharge[]
+  shipments          Shipment[]
+
+  @@index([organizationId, purchaseOrderId])
+  @@index([organizationId, status])
+  @@map("freight_quotes")
+}
+
+model FreightQuoteCharge {
+  id        String       @id @default(cuid())
+  quoteId   String
+  quote     FreightQuote @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  category  String
+  label     String?
+  amount    Decimal      @db.Decimal(20, 2)
+  sortOrder Int          @default(0)
+
+  @@index([quoteId])
+  @@map("freight_quote_charges")
+}
+
+/// Private files for freight quotes, shipments, exceptions and claims.
+model LogisticsAttachment {
+  id               String   @id @default(cuid())
+  organizationId   String
+  entityType       String
+  entityId         String
+  shipmentId       String?
+  exceptionId      String?
+  claimId          String?
+  originalFilename String
+  storageKey       String
+  mimeType         String
+  sizeBytes        Int
+  checksum         String
+  uploadedByUserId String
+  createdAt        DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([organizationId, entityType, entityId])
+  @@map("logistics_attachments")
+}
+
+model Shipment {
+  id                       String                  @id @default(cuid())
+  organizationId           String
+  organization             Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  shipmentNumber           String
+  purchaseOrderId          String
+  freightQuoteId           String?
+  freightQuote             FreightQuote?           @relation(fields: [freightQuoteId], references: [id], onDelete: SetNull)
+  proformaInvoiceId        String?
+  quotationId              String?
+  crmLeadId                String?
+  buyerCompanyId           String
+  mode                     String
+  shipmentType             String?
+  incoterm                 String?
+  incotermPlace            String?
+  originCountry            String?
+  destinationCountry       String?
+  portOfLoading            String?
+  portOfDischarge          String?
+  placeOfReceipt           String?
+  placeOfDelivery          String?
+  carrier                  String?
+  shippingLine             String?
+  vesselName               String?
+  voyageNumber             String?
+  flightNumber             String?
+  vehicleReference         String?
+  bookingReference         String?
+  blNumber                 String?
+  awbNumber                String?
+  originalEtd              DateTime?               @db.Timestamptz(3)
+  etd                      DateTime?               @db.Timestamptz(3)
+  etdUpdatedAt             DateTime?               @db.Timestamptz(3)
+  originalEta              DateTime?               @db.Timestamptz(3)
+  eta                      DateTime?               @db.Timestamptz(3)
+  etaUpdatedAt             DateTime?               @db.Timestamptz(3)
+  actualDeparture          DateTime?               @db.Timestamptz(3)
+  actualArrival            DateTime?               @db.Timestamptz(3)
+  deliveredAt              DateTime?               @db.Timestamptz(3)
+  status                   String                  @default("PLANNED")
+  holdFromStatus           String?
+  health                   String                  @default("ON_TRACK")
+  /// Cargo snapshot with per-field origin (packing list, PO, manual …).
+  cargo                    Json
+  shippingBillNumber       String?
+  shippingBillDate         DateTime?               @db.Timestamptz(3)
+  customsBroker            String?
+  customsClearedAt         DateTime?               @db.Timestamptz(3)
+  complianceAcknowledged   Boolean                 @default(false)
+  complianceOverrideReason String?
+  quotedCost               Decimal?                @db.Decimal(20, 2)
+  quotedCurrency           String?
+  actualFreight            Decimal?                @db.Decimal(20, 2)
+  actualSurcharges         Decimal?                @db.Decimal(20, 2)
+  actualLocalCharges       Decimal?                @db.Decimal(20, 2)
+  actualCostCurrency       String?
+  actualCostNotes          String?
+  trackingProvider         String?
+  trackingLastFetchedAt    DateTime?               @db.Timestamptz(3)
+  trackingLastError        String?
+  ownerUserId              String?
+  notes                    String?
+  rowVersion               Int                     @default(0)
+  createdByUserId          String
+  createdAt                DateTime                @default(now()) @db.Timestamptz(3)
+  updatedAt                DateTime                @updatedAt @db.Timestamptz(3)
+  milestones               ShipmentMilestone[]
+  legs                     ShipmentLeg[]
+  containers               ShipmentContainer[]
+  trackingEvents           ShipmentTrackingEvent[]
+  exceptions               ShipmentException[]
+  claims                   ShipmentClaim[]
+  buyerUpdates             ShipmentBuyerUpdate[]
+
+  @@unique([organizationId, shipmentNumber])
+  @@index([organizationId, status])
+  @@index([organizationId, purchaseOrderId])
+  @@map("shipments")
+}
+
+model ShipmentMilestone {
+  id                String    @id @default(cuid())
+  shipmentId        String
+  shipment          Shipment  @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  stage             String
+  sortOrder         Int
+  status            String    @default("NOT_STARTED")
+  plannedAt         DateTime? @db.Timestamptz(3)
+  estimatedAt       DateTime? @db.Timestamptz(3)
+  actualAt          DateTime? @db.Timestamptz(3)
+  location          String?
+  source            String    @default("MANUAL")
+  notes             String?
+  reason            String?
+  completedByUserId String?
+  createdAt         DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime  @updatedAt @db.Timestamptz(3)
+
+  @@unique([shipmentId, stage])
+  @@map("shipment_milestones")
+}
+
+model ShipmentLeg {
+  id               String    @id @default(cuid())
+  shipmentId       String
+  shipment         Shipment  @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  sequence         Int
+  mode             String
+  origin           String?
+  destination      String?
+  carrier          String?
+  vesselName       String?
+  voyageNumber     String?
+  flightNumber     String?
+  plannedDeparture DateTime? @db.Timestamptz(3)
+  plannedArrival   DateTime? @db.Timestamptz(3)
+  actualDeparture  DateTime? @db.Timestamptz(3)
+  actualArrival    DateTime? @db.Timestamptz(3)
+  status           String    @default("PLANNED")
+  createdAt        DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime  @updatedAt @db.Timestamptz(3)
+
+  @@unique([shipmentId, sequence])
+  @@map("shipment_legs")
+}
+
+model ShipmentContainer {
+  id              String   @id @default(cuid())
+  shipmentId      String
+  shipment        Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  containerNumber String
+  containerType   String?
+  sealNumber      String?
+  packageCount    Int?
+  grossWeightKg   Decimal? @db.Decimal(14, 3)
+  netWeightKg     Decimal? @db.Decimal(14, 3)
+  checkDigitValid Boolean  @default(true)
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime @updatedAt @db.Timestamptz(3)
+
+  @@unique([shipmentId, containerNumber])
+  @@map("shipment_containers")
+}
+
+/// Append-only tracking history. eventKey makes repeated provider/manual submissions idempotent.
+model ShipmentTrackingEvent {
+  id              String   @id @default(cuid())
+  organizationId  String
+  shipmentId      String
+  shipment        Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  eventKey        String
+  eventType       String
+  eventTime       DateTime @db.Timestamptz(3)
+  estimated       Boolean  @default(false)
+  location        String?
+  containerNumber String?
+  vesselName      String?
+  voyageNumber    String?
+  flightNumber    String?
+  source          String
+  sourceReference String?
+  rawReference    String?
+  description     String
+  previousValue   String?
+  newValue        String?
+  applied         Boolean  @default(true)
+  appliedNote     String?
+  createdByUserId String?
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+
+  @@unique([shipmentId, eventKey])
+  @@index([shipmentId, eventTime])
+  @@map("shipment_tracking_events")
+}
+
+model ShipmentException {
+  id               String          @id @default(cuid())
+  organizationId   String
+  shipmentId       String
+  shipment         Shipment        @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  type             String
+  severity         String
+  status           String          @default("OPEN")
+  /// Set for system-detected exceptions so they are not duplicated while open.
+  autoKey          String?
+  detectedAt       DateTime        @default(now()) @db.Timestamptz(3)
+  occurredAt       DateTime?       @db.Timestamptz(3)
+  title            String
+  description      String?
+  impact           String?
+  location         String?
+  source           String          @default("MANUAL")
+  trackingEventId  String?
+  ownerUserId      String?
+  dueAt            DateTime?       @db.Timestamptz(3)
+  resolution       String?
+  resolvedAt       DateTime?       @db.Timestamptz(3)
+  resolvedByUserId String?
+  createdByUserId  String?
+  createdAt        DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime        @updatedAt @db.Timestamptz(3)
+  claims           ShipmentClaim[]
+
+  @@index([organizationId, status])
+  @@index([shipmentId])
+  @@map("shipment_exceptions")
+}
+
+model ShipmentClaim {
+  id               String             @id @default(cuid())
+  organizationId   String
+  shipmentId       String
+  shipment         Shipment           @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  exceptionId      String?
+  exception        ShipmentException? @relation(fields: [exceptionId], references: [id], onDelete: SetNull)
+  description      String
+  quantityAffected String?
+  estimatedLoss    Decimal?           @db.Decimal(20, 2)
+  currency         String?
+  claimReference   String?
+  insurerReference String?
+  carrierReference String?
+  status           String             @default("REPORTED")
+  notes            String?
+  createdByUserId  String
+  createdAt        DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime           @updatedAt @db.Timestamptz(3)
+
+  @@index([shipmentId])
+  @@map("shipment_claims")
+}
+
+/// Buyer update drafts. ExportPro has no one-off transactional sender, so nothing here is "sent" by the system.
+model ShipmentBuyerUpdate {
+  id                   String    @id @default(cuid())
+  organizationId       String
+  shipmentId           String
+  shipment             Shipment  @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  trigger              String
+  trackingEventId      String?
+  subject              String
+  message              String
+  status               String    @default("DRAFT")
+  channel              String?
+  approvedByUserId     String?
+  approvedAt           DateTime? @db.Timestamptz(3)
+  recordedSentByUserId String?
+  recordedSentAt       DateTime? @db.Timestamptz(3)
+  createdByUserId      String?
+  createdAt            DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime  @updatedAt @db.Timestamptz(3)
+
+  @@index([shipmentId])
+  @@map("shipment_buyer_updates")
 }

@@ -147,8 +147,9 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Shipments & Logistics",
     href: "/shipments",
     icon: Ship,
-    status: "placeholder",
-    description: "Track shipments and logistics milestones.",
+    status: "active",
+    permission: "logistics.view",
+    description: "Freight quotes, shipments, milestones, tracking and exceptions.",
   },
   {
     label: "Suppliers & Procurement",
@@ -213,7 +214,7 @@ export const NAV_ITEMS: NavItem[] = [
 ];
 
 /** Routes without their own sidebar item, shown under the closest parent section. */
-const SECTION_ALIASES: Record<string, string> = { "/compare": "/recommendations", "/proforma-invoices": "/quotations", "/purchase-orders": "/quotations", "/documents": "/compliance" };
+const SECTION_ALIASES: Record<string, string> = { "/compare": "/recommendations", "/proforma-invoices": "/quotations", "/purchase-orders": "/quotations", "/documents": "/compliance", "/freight-quotes": "/shipments" };
 
 export function findNavItemByPath(pathname: string): NavItem | undefined {
   const alias = Object.entries(SECTION_ALIASES).find(([prefix]) => pathname === prefix || pathname.startsWith(`${prefix}/`));

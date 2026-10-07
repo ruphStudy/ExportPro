@@ -28,6 +28,7 @@ import { InquiriesModule } from './modules/inquiries/inquiries.module';
 import { CommercialModule } from './modules/commercial/commercial.module';
 import { ComplianceModule } from './modules/compliance/compliance.module';
 import { DocumentValidationModule } from './modules/document-validation/document-validation.module';
+import { LogisticsModule } from './modules/logistics/logistics.module';
 import { CrmModule } from './modules/crm/crm.module';
 import { OutreachModule } from './modules/outreach/outreach.module';
 import { DevModule } from './modules/dev/dev.module';
@@ -67,6 +68,7 @@ import { DevModule } from './modules/dev/dev.module';
     CommercialModule,
     ComplianceModule,
     DocumentValidationModule,
+    LogisticsModule,
     CrmModule,
     OutreachModule,
     // Dev-only mailbox for reading OTP/reset emails without a real mail provider.

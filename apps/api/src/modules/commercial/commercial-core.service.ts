@@ -154,7 +154,7 @@ export class CommercialCoreService {
   async nextNumber(
     tx: Tx,
     organizationId: string,
-    docType: 'QUOTATION' | 'PI' | 'CI' | 'PL' | 'SI',
+    docType: 'QUOTATION' | 'PI' | 'CI' | 'PL' | 'SI' | 'SHP' | 'FR',
     prefix: string,
     yearlyReset: boolean,
     now = new Date(),
@@ -283,7 +283,14 @@ export class CommercialCoreService {
     a: { organizationId: string; userId: string | null },
     e: {
       entityType:
-        'QUOTATION' | 'PI' | 'PO' | 'DOCUMENT' | 'COMPLIANCE' | 'VALIDATION';
+        | 'QUOTATION'
+        | 'PI'
+        | 'PO'
+        | 'DOCUMENT'
+        | 'COMPLIANCE'
+        | 'VALIDATION'
+        | 'SHIPMENT'
+        | 'FREIGHT';
       entityId: string;
       lineageId: string;
       type: string;
@@ -358,7 +365,7 @@ export class CommercialCoreService {
   async crmContext(
     organizationId: string,
     leadId: string | null,
-    target: 'QUOTATION' | 'PO',
+    target: 'QUOTATION' | 'PO' | 'SHIPMENT',
     reason: string,
   ) {
     if (!leadId) return null;

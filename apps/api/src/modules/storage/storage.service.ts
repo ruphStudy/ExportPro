@@ -152,7 +152,8 @@ export class StorageService {
       | 'lead-attachments'
       | 'inquiry-attachments'
       | 'po-attachments'
-      | 'trade-documents',
+      | 'trade-documents'
+      | 'logistics-attachments',
     file: Express.Multer.File,
     allowed: Record<string, string[]>,
     maxSizeBytes: number,

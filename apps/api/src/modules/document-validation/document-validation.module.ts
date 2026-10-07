@@ -31,5 +31,6 @@ import { DocumentValidationService } from './validation.service';
         ),
     },
   ],
+  exports: [DocumentValidationService],
 })
 export class DocumentValidationModule {}

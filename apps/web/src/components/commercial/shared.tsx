@@ -118,7 +118,7 @@ export function ReasonDialog({ open, onOpenChange, title, description, label = "
   );
 }
 
-const ENTITY_LABEL = { QUOTATION: "Quotation", PI: "Proforma invoice", PO: "Purchase order", DOCUMENT: "Document", COMPLIANCE: "Compliance", VALIDATION: "Validation" } as const;
+const ENTITY_LABEL = { QUOTATION: "Quotation", PI: "Proforma invoice", PO: "Purchase order", DOCUMENT: "Document", COMPLIANCE: "Compliance", VALIDATION: "Validation", SHIPMENT: "Shipment", FREIGHT: "Freight" } as const;
 
 /** Commercial timeline (business events; separate from the audit log). */
 export function CommercialTimeline({ events }: { events: CommercialEvent[] }) {

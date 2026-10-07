@@ -13,5 +13,6 @@ import { DocumentsService } from './documents.service';
   imports: [AuditModule, CommercialModule],
   controllers: [ComplianceController, DocumentsController],
   providers: [ComplianceService, DocumentsService],
+  exports: [ComplianceService],
 })
 export class ComplianceModule {}
