@@ -10,6 +10,7 @@ import { toFriendlyErrorMessage } from "@/lib/api-client";
 import { ReasonDialog } from "@/components/commercial/shared";
 import { day, HealthBadge, LogisticsTabs, money, SHIPMENT_STATUS, StatusBadge, useLogisticsMutation } from "@/components/logistics/shared";
 import { ActivitySection, BuyerUpdatesSection, CargoSection, CostsSection, DocumentsSection, ExceptionsSection, OverviewSection, TimelineSection, TrackingSection } from "@/components/logistics/shipment-sections";
+import { ShipmentFinanceCard } from "@/components/finance/entry-cards";
 import { RequirePermission } from "@/components/layout/require-permission";
 import { Badge } from "@/components/ui/badge";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
@@ -94,6 +95,7 @@ function Detail() {
         {tab === "costs" && <CostsSection s={s} />}
         {tab === "activity" && <ActivitySection s={s} />}
       </div>
+      {(tab === "overview" || tab === "costs") && <ShipmentFinanceCard shipmentId={s.id} />}
     </div>
   );
 }

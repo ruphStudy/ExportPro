@@ -45,6 +45,7 @@ import { Badge } from "@/components/ui/badge";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { LeadCommercialCard } from "@/components/commercial/entry-points";
 import { LeadShipmentCard } from "@/components/logistics/entry-cards";
+import { BuyerFinanceCard } from "@/components/finance/entry-cards";
 import { LeadCostingsCard } from "@/components/costing/costing-entry";
 import { LeadInquiriesCard } from "@/components/inquiries/lead-inquiries-card";
 import { Button } from "@/components/ui/button";
@@ -107,6 +108,7 @@ function LeadDetail() {
           <LeadCostingsCard leadId={l.id} />
           <LeadCommercialCard leadId={l.id} />
           <LeadShipmentCard leadId={l.id} />
+          <BuyerFinanceCard buyerId={l.buyer.id} lead />
           <RemindersCard lead={l} reminders={d.reminders} tasks={d.tasks} members={memberList} />
           <DealCard key={`deal-${l.version}`} lead={l} />
           <QualificationCard key={`q-${l.version}`} lead={l} />

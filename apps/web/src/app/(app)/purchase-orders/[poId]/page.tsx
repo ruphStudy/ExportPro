@@ -13,6 +13,7 @@ import { poBody, PoFields, poFromDetail, type PoFormState } from "@/components/c
 import { CommercialTimeline, ReasonDialog, useCommercialMutation } from "@/components/commercial/shared";
 import { PoComplianceCard, PoValidationCard } from "@/components/compliance/po-compliance-card";
 import { PoLogisticsCard } from "@/components/logistics/entry-cards";
+import { PoFinanceCard } from "@/components/finance/entry-cards";
 import { RequirePermission } from "@/components/layout/require-permission";
 import { Badge } from "@/components/ui/badge";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
@@ -55,6 +56,7 @@ function PoView() {
           <PoComplianceCard purchaseOrderId={d.id} />
           <PoValidationCard purchaseOrderId={d.id} />
           <PoLogisticsCard purchaseOrderId={d.id} accepted={d.status === "ACCEPTED"} />
+          <PoFinanceCard purchaseOrderId={d.id} accepted={d.status === "ACCEPTED"} />
           <Attachments d={d} />
           <CommercialTimeline events={d.events} />
         </aside>

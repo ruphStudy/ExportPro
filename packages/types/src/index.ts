@@ -22,3 +22,4 @@ export * from "./commercial";
 export * from "./compliance";
 export * from "./document-validation";
 export * from "./logistics";
+export * from "./finance";

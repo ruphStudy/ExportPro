@@ -114,6 +114,17 @@ export const PERMISSIONS = [
   "logistics.buyer_updates.manage",
   "logistics.costs.edit",
   "logistics.override",
+  "finance.view",
+  "finance.settings",
+  "receivables.manage",
+  "payments.record",
+  "payments.reverse",
+  "profitability.view",
+  "profitability.edit_costs",
+  "profitability.finalize",
+  "profitability.reopen",
+  "repeat_business.view",
+  "repeat_business.manage",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -239,6 +250,17 @@ export const ROLE_PERMISSIONS: Record<MembershipRole, readonly Permission[]> = {
     "logistics.buyer_updates.manage",
     "logistics.costs.edit",
     "logistics.override",
+    "finance.view",
+    "finance.settings",
+    "receivables.manage",
+    "payments.record",
+    "payments.reverse",
+    "profitability.view",
+    "profitability.edit_costs",
+    "profitability.finalize",
+    "profitability.reopen",
+    "repeat_business.view",
+    "repeat_business.manage",
   ],
   // Same as OWNER except owner-only destructive actions (transfer
   // ownership, delete organization) are enforced by explicit role
@@ -352,6 +374,17 @@ export const ROLE_PERMISSIONS: Record<MembershipRole, readonly Permission[]> = {
     "logistics.buyer_updates.manage",
     "logistics.costs.edit",
     "logistics.override",
+    "finance.view",
+    "finance.settings",
+    "receivables.manage",
+    "payments.record",
+    "payments.reverse",
+    "profitability.view",
+    "profitability.edit_costs",
+    "profitability.finalize",
+    "profitability.reopen",
+    "repeat_business.view",
+    "repeat_business.manage",
   ],
   // Can run the exporter-onboarding wizard and opportunity discovery day
   // to day, but not manage team membership or organization identity.
@@ -455,6 +488,17 @@ export const ROLE_PERMISSIONS: Record<MembershipRole, readonly Permission[]> = {
     "logistics.buyer_updates.manage",
     "logistics.costs.edit",
     "logistics.override",
+    "finance.view",
+    "finance.settings",
+    "receivables.manage",
+    "payments.record",
+    "payments.reverse",
+    "profitability.view",
+    "profitability.edit_costs",
+    "profitability.finalize",
+    "profitability.reopen",
+    "repeat_business.view",
+    "repeat_business.manage",
   ],
   SALES: [
     "organization.view",
@@ -513,6 +557,9 @@ export const ROLE_PERMISSIONS: Record<MembershipRole, readonly Permission[]> = {
     "documents.view",
     "document_validation.view",
     "logistics.view",
+    "finance.view",
+    "repeat_business.view",
+    "repeat_business.manage",
   ],
   // Classification support: can run analyses, answer clarifications and
   // pre-select candidates, but confirming/saving stays with managers.
@@ -557,10 +604,11 @@ export const ROLE_PERMISSIONS: Record<MembershipRole, readonly Permission[]> = {
     "document_validation.resolve",
     "document_validation.signoff",
     "logistics.view",
+    "finance.view",
   ],
-  LOGISTICS: ["organization.view", "team.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view", "products.view", "product_intelligence.view", "country_intelligence.view", "comparisons.view", "recommendations.view", "buyers.view", "crm.view", "outreach.view", "costing.view", "costing.edit_logistics", "costing.calculate", "inquiries.view", "quotations.view", "proforma_invoice.view", "purchase_orders.view", "compliance.view", "documents.view", "documents.edit_logistics", "document_validation.view", "document_validation.review", "logistics.view", "logistics.freight_quotes.create", "logistics.freight_quotes.select", "logistics.shipments.create", "logistics.shipments.edit", "logistics.tracking.update", "logistics.exceptions.manage", "logistics.buyer_updates.manage", "logistics.costs.edit"],
-  FINANCE: ["organization.view", "team.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view", "products.view", "product_intelligence.view", "country_intelligence.view", "comparisons.view", "recommendations.view", "buyers.view", "crm.view", "outreach.view", "costing.view", "costing.create", "costing.edit", "costing.calculate", "costing.ready", "inquiries.view", "quotations.view", "proforma_invoice.view", "proforma_invoice.create", "proforma_invoice.edit", "proforma_invoice.issue", "purchase_orders.view", "commercial.settings", "compliance.view", "documents.view", "document_validation.view", "document_validation.review", "logistics.view", "logistics.costs.edit"],
-  VIEWER: ["organization.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view", "products.view", "product_intelligence.view", "country_intelligence.view", "comparisons.view", "recommendations.view", "buyers.view", "crm.view", "outreach.view", "costing.view", "inquiries.view", "quotations.view", "proforma_invoice.view", "purchase_orders.view", "compliance.view", "documents.view", "document_validation.view", "logistics.view"],
+  LOGISTICS: ["organization.view", "team.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view", "products.view", "product_intelligence.view", "country_intelligence.view", "comparisons.view", "recommendations.view", "buyers.view", "crm.view", "outreach.view", "costing.view", "costing.edit_logistics", "costing.calculate", "inquiries.view", "quotations.view", "proforma_invoice.view", "purchase_orders.view", "compliance.view", "documents.view", "documents.edit_logistics", "document_validation.view", "document_validation.review", "logistics.view", "logistics.freight_quotes.create", "logistics.freight_quotes.select", "logistics.shipments.create", "logistics.shipments.edit", "logistics.tracking.update", "logistics.exceptions.manage", "logistics.buyer_updates.manage", "logistics.costs.edit", "profitability.view"],
+  FINANCE: ["organization.view", "team.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view", "products.view", "product_intelligence.view", "country_intelligence.view", "comparisons.view", "recommendations.view", "buyers.view", "crm.view", "outreach.view", "costing.view", "costing.create", "costing.edit", "costing.calculate", "costing.ready", "inquiries.view", "quotations.view", "proforma_invoice.view", "proforma_invoice.create", "proforma_invoice.edit", "proforma_invoice.issue", "purchase_orders.view", "commercial.settings", "compliance.view", "documents.view", "document_validation.view", "document_validation.review", "logistics.view", "logistics.costs.edit", "finance.view", "finance.settings", "receivables.manage", "payments.record", "payments.reverse", "profitability.view", "profitability.edit_costs", "profitability.finalize", "repeat_business.view", "repeat_business.manage"],
+  VIEWER: ["organization.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view", "products.view", "product_intelligence.view", "country_intelligence.view", "comparisons.view", "recommendations.view", "buyers.view", "crm.view", "outreach.view", "costing.view", "inquiries.view", "quotations.view", "proforma_invoice.view", "purchase_orders.view", "compliance.view", "documents.view", "document_validation.view", "logistics.view", "finance.view", "profitability.view", "repeat_business.view"],
 };
 
 export function roleHasPermission(role: MembershipRole, permission: Permission): boolean {

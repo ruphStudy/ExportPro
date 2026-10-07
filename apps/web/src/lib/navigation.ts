@@ -1,4 +1,5 @@
 import {
+  Wallet,
   BarChart3,
   Calculator,
   ClipboardCheck,
@@ -152,6 +153,14 @@ export const NAV_ITEMS: NavItem[] = [
     description: "Freight quotes, shipments, milestones, tracking and exceptions.",
   },
   {
+    label: "Finance & Profitability",
+    href: "/finance",
+    icon: Wallet,
+    status: "active",
+    permission: "finance.view",
+    description: "Receivables, payments, shipment profitability and repeat business (operational finance, not accounting).",
+  },
+  {
     label: "Suppliers & Procurement",
     href: "/suppliers",
     icon: Truck,
@@ -214,7 +223,7 @@ export const NAV_ITEMS: NavItem[] = [
 ];
 
 /** Routes without their own sidebar item, shown under the closest parent section. */
-const SECTION_ALIASES: Record<string, string> = { "/compare": "/recommendations", "/proforma-invoices": "/quotations", "/purchase-orders": "/quotations", "/documents": "/compliance", "/freight-quotes": "/shipments" };
+const SECTION_ALIASES: Record<string, string> = { "/compare": "/recommendations", "/proforma-invoices": "/quotations", "/purchase-orders": "/quotations", "/documents": "/compliance", "/freight-quotes": "/shipments", "/profitability": "/finance", "/repeat-business": "/finance" };
 
 export function findNavItemByPath(pathname: string): NavItem | undefined {
   const alias = Object.entries(SECTION_ALIASES).find(([prefix]) => pathname === prefix || pathname.startsWith(`${prefix}/`));

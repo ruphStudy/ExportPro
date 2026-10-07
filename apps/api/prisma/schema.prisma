@@ -523,8 +523,13 @@ model Organization {
   proformaInvoices       ProformaInvoice[]
   purchaseOrders         BuyerPurchaseOrder[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  financeSettings       FinanceSettings?
+  receivables           Receivable[]
+  shipmentActualCosts   ShipmentActualCost[]
+  shipmentProfitability ShipmentProfitability[]
+  reorderReminders      ReorderReminder[]
 
   @@map("organizations")
 }
@@ -3887,4 +3892,311 @@ model ShipmentBuyerUpdate {
 
   @@index([shipmentId])
   @@map("shipment_buyer_updates")
+}
+
+// --- Sprint 19: payments, receivables, profitability & repeat business ---
+// Operational finance only — not an accounting ledger, tax system, payment
+// gateway or bank integration.
+
+model FinanceSettings {
+  id                String       @id @default(cuid())
+  organizationId    String       @unique
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  reportingCurrency String       @default("INR")
+  dueSoonDays       Int          @default(7)
+  reorderLeadDays   Int          @default(7)
+  updatedByUserId   String?
+  updatedAt         DateTime     @updatedAt @db.Timestamptz(3)
+
+  @@map("finance_settings")
+}
+
+/// Receivable created from agreed commercial terms. The terms snapshot is immutable:
+/// later PI/PO edits never change an existing schedule.
+model Receivable {
+  id                   String       @id @default(cuid())
+  organizationId       String
+  organization         Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  receivableNumber     String
+  buyerCompanyId       String
+  purchaseOrderId      String
+  shipmentId           String?
+  proformaInvoiceId    String?
+  quotationId          String?
+  commercialInvoiceId  String?
+  crmLeadId            String?
+  destinationCountry   String?
+  currency             String
+  totalAmount          Decimal      @db.Decimal(20, 2)
+  paidAmount           Decimal      @default(0) @db.Decimal(20, 2)
+  outstandingAmount    Decimal      @db.Decimal(20, 2)
+  /// Lifecycle only (OPEN / CANCELLED / UNCOLLECTIBLE); due/overdue/paid is computed at read time.
+  state                String       @default("OPEN")
+  paymentTermsType     String
+  paymentTermsText     String?
+  paymentTermsSnapshot Json
+  customConfirmed      Boolean      @default(false)
+  invoiceDate          DateTime?    @db.Timestamptz(3)
+  termDays             Int?
+  documentsPresentedAt DateTime?    @db.Timestamptz(3)
+  collectingBank       String?
+  acceptedAt           DateTime?    @db.Timestamptz(3)
+  tenorDays            Int?
+  paymentReceivedAt    DateTime?    @db.Timestamptz(3)
+  bookingFx            Json?
+  disputeAmount        Decimal?     @db.Decimal(20, 2)
+  disputeReason        String?
+  disputeNotes         String?
+  disputedAt           DateTime?    @db.Timestamptz(3)
+  uncollectibleReason  String?
+  uncollectibleAt      DateTime?    @db.Timestamptz(3)
+  cancelReason         String?
+  ownerUserId          String?
+  notes                String?
+  rowVersion           Int          @default(0)
+  createdByUserId      String
+  createdAt            DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime     @updatedAt @db.Timestamptz(3)
+
+  installments   ReceivableInstallment[]
+  payments       PaymentReceipt[]
+  letterOfCredit LetterOfCredit?
+  reminders      ReceivableReminder[]
+
+  @@unique([organizationId, receivableNumber])
+  @@index([organizationId, state])
+  @@index([organizationId, purchaseOrderId])
+  @@index([organizationId, buyerCompanyId])
+  @@index([organizationId, shipmentId])
+  @@map("receivables")
+}
+
+model ReceivableInstallment {
+  id                String     @id @default(cuid())
+  organizationId    String
+  receivableId      String
+  receivable        Receivable @relation(fields: [receivableId], references: [id], onDelete: Cascade)
+  sequence          Int
+  label             String
+  percentage        Decimal?   @db.Decimal(8, 4)
+  amount            Decimal    @db.Decimal(20, 2)
+  triggerType       String
+  dueDays           Int?
+  fixedDate         DateTime?  @db.Timestamptz(3)
+  paidAmount        Decimal    @default(0) @db.Decimal(20, 2)
+  outstandingAmount Decimal    @db.Decimal(20, 2)
+  disputeAmount     Decimal?   @db.Decimal(20, 2)
+  disputeReason     String?
+  disputeNotes      String?
+  disputedAt        DateTime?  @db.Timestamptz(3)
+
+  @@unique([receivableId, sequence])
+  @@map("receivable_installments")
+}
+
+/// Immutable once recorded; mistakes are reversed (status REVERSED), never deleted or edited.
+model PaymentReceipt {
+  id                  String     @id @default(cuid())
+  organizationId      String
+  receivableId        String
+  receivable          Receivable @relation(fields: [receivableId], references: [id], onDelete: Cascade)
+  installmentId       String?
+  amount              Decimal    @db.Decimal(20, 2)
+  currency            String
+  receivedAt          DateTime   @db.Timestamptz(3)
+  paymentMethod       String
+  bankReference       String?
+  remittanceReference String?
+  /// Normalized reference used for duplicate protection.
+  referenceKey        String?
+  bankName            String?
+  notes               String?
+  source              String     @default("MANUAL")
+  fxRate              Decimal?   @db.Decimal(24, 10)
+  fxSourceLabel       String?
+  fxSourceDate        DateTime?  @db.Timestamptz(3)
+  fxSnapshotId        String?
+  appliedAmount       Decimal    @db.Decimal(20, 2)
+  excessAmount        Decimal    @default(0) @db.Decimal(20, 2)
+  overpaymentReason   String?
+  allocations         Json
+  settlementFxRate    Decimal?   @db.Decimal(24, 10)
+  settlementFxSource  String?
+  settlementFxDate    DateTime?  @db.Timestamptz(3)
+  charges             Json?
+  status              String     @default("RECORDED")
+  reversalReason      String?
+  reversedByUserId    String?
+  reversedAt          DateTime?  @db.Timestamptz(3)
+  recordedByUserId    String
+  createdAt           DateTime   @default(now()) @db.Timestamptz(3)
+
+  @@unique([receivableId, referenceKey])
+  @@index([organizationId, receivedAt])
+  @@map("payment_receipts")
+}
+
+/// Operational LC tracking only — no SWIFT, bank API or submission.
+model LetterOfCredit {
+  id                   String     @id @default(cuid())
+  organizationId       String
+  receivableId         String     @unique
+  receivable           Receivable @relation(fields: [receivableId], references: [id], onDelete: Cascade)
+  lcNumber             String
+  issuingBank          String
+  advisingBank         String?
+  amount               Decimal    @db.Decimal(20, 2)
+  currency             String
+  issueDate            DateTime?  @db.Timestamptz(3)
+  expiryDate           DateTime?  @db.Timestamptz(3)
+  latestShipmentDate   DateTime?  @db.Timestamptz(3)
+  presentationDeadline DateTime?  @db.Timestamptz(3)
+  status               String     @default("DRAFT")
+  documents            Json?
+  notes                String?
+  rowVersion           Int        @default(0)
+  createdByUserId      String
+  createdAt            DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime   @updatedAt @db.Timestamptz(3)
+
+  @@map("letters_of_credit")
+}
+
+/// Human-approved payment reminder drafts. Never sent by ExportPro.
+model ReceivableReminder {
+  id               String     @id @default(cuid())
+  organizationId   String
+  receivableId     String
+  receivable       Receivable @relation(fields: [receivableId], references: [id], onDelete: Cascade)
+  installmentId    String?
+  kind             String
+  status           String     @default("DRAFT")
+  subject          String
+  message          String
+  dueAmount        Decimal    @db.Decimal(20, 2)
+  currency         String
+  dueDate          DateTime?  @db.Timestamptz(3)
+  channel          String?
+  recordedSentAt   DateTime?  @db.Timestamptz(3)
+  recordedByUserId String?
+  dismissedAt      DateTime?  @db.Timestamptz(3)
+  createdByUserId  String
+  createdAt        DateTime   @default(now()) @db.Timestamptz(3)
+
+  @@index([organizationId, status])
+  @@map("receivable_reminders")
+}
+
+/// Manual actual costs. Sprint 18 logistics actuals and payment bank charges are
+/// read from their source (never copied here).
+model ShipmentActualCost {
+  id                String       @id @default(cuid())
+  organizationId    String
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  shipmentId        String
+  category          String
+  description       String
+  amount            Decimal      @db.Decimal(20, 2)
+  currency          String
+  fxRate            Decimal?     @db.Decimal(24, 10)
+  fxSourceLabel     String?
+  fxSourceDate      DateTime?    @db.Timestamptz(3)
+  fxSnapshotId      String?
+  reportingCurrency String
+  convertedAmount   Decimal      @db.Decimal(20, 2)
+  source            String       @default("MANUAL")
+  sourceReference   String?
+  incurredAt        DateTime?    @db.Timestamptz(3)
+  vendorName        String?
+  attachmentKey     String?
+  attachmentName    String?
+  attachmentMime    String?
+  attachmentSize    Int?
+  voidedAt          DateTime?    @db.Timestamptz(3)
+  voidReason        String?
+  createdByUserId   String
+  createdAt         DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime     @updatedAt @db.Timestamptz(3)
+
+  @@index([organizationId, shipmentId])
+  @@map("shipment_actual_costs")
+}
+
+model ProfitabilityAdjustment {
+  id              String   @id @default(cuid())
+  organizationId  String
+  shipmentId      String
+  type            String
+  amount          Decimal  @db.Decimal(20, 2)
+  currency        String
+  reason          String
+  createdByUserId String
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([organizationId, shipmentId])
+  @@map("profitability_adjustments")
+}
+
+model ShipmentProfitability {
+  id                String       @id @default(cuid())
+  organizationId    String
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  shipmentId        String       @unique
+  finalized         Boolean      @default(false)
+  finalizedAt       DateTime?    @db.Timestamptz(3)
+  finalizedByUserId String?
+  currentSnapshotId String?
+  confirmedNone     String[]     @default([])
+  reopenedAt        DateTime?    @db.Timestamptz(3)
+  reopenedByUserId  String?
+  reopenReason      String?
+  rowVersion        Int          @default(0)
+  createdAt         DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime     @updatedAt @db.Timestamptz(3)
+
+  snapshots ProfitabilitySnapshot[]
+
+  @@index([organizationId, finalized])
+  @@map("shipment_profitability")
+}
+
+/// Immutable finalized profitability; reopening marks it superseded but keeps it.
+model ProfitabilitySnapshot {
+  id                String                @id @default(cuid())
+  organizationId    String
+  profitabilityId   String
+  profitability     ShipmentProfitability @relation(fields: [profitabilityId], references: [id], onDelete: Cascade)
+  shipmentId        String
+  version           Int
+  data              Json
+  finalizedByUserId String
+  finalizedAt       DateTime              @default(now()) @db.Timestamptz(3)
+  supersededAt      DateTime?             @db.Timestamptz(3)
+  reopenReason      String?
+
+  @@unique([profitabilityId, version])
+  @@map("profitability_snapshots")
+}
+
+model ReorderReminder {
+  id              String       @id @default(cuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  buyerCompanyId  String
+  productId       String?
+  productName     String?
+  windowStart     DateTime     @db.Timestamptz(3)
+  windowEnd       DateTime     @db.Timestamptz(3)
+  status          String       @default("SUGGESTED")
+  snoozedUntil    DateTime?    @db.Timestamptz(3)
+  message         String
+  basis           Json
+  dismissReason   String?
+  rowVersion      Int          @default(0)
+  createdByUserId String
+  createdAt       DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime     @updatedAt @db.Timestamptz(3)
+
+  @@unique([organizationId, buyerCompanyId, windowStart])
+  @@map("reorder_reminders")
 }

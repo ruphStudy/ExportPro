@@ -15,6 +15,7 @@ import { CommercialInvoiceEditor, DocumentPreview, PackingListEditor, ShippingIn
 import { useComplianceMutation } from "@/components/compliance/shared";
 import { ExtractionValidationSection } from "@/components/document-validation/extraction-panel";
 import { UploadDocumentDialog } from "@/components/compliance/upload-dialog";
+import { InvoiceReceivableCard } from "@/components/finance/entry-cards";
 import { RequirePermission } from "@/components/layout/require-permission";
 import { Badge } from "@/components/ui/badge";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
@@ -71,6 +72,7 @@ function DocumentView() {
         </div>
         <aside className="flex min-w-0 flex-col gap-4" aria-label="Document details">
           <Meta d={d} />
+          {d.documentType === "COMMERCIAL_INVOICE" && <InvoiceReceivableCard documentId={d.id} />}
           <Card className="p-4 text-sm">
             <SectionTitle className="text-base">Versions</SectionTitle>
             <ul className="mt-2 flex flex-col gap-1">{d.versions.map((v) => <li key={v.id} className="flex items-center justify-between gap-2">{v.id === d.id ? <span>v{v.version} (this)</span> : <Link className="text-primary hover:underline" href={`/documents/${v.id}`}>v{v.version}</Link>}<Badge variant={DOC_STATUS[v.status].variant}>{DOC_STATUS[v.status].label}</Badge></li>)}</ul>

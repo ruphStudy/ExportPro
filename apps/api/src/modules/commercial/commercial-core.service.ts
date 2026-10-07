@@ -154,7 +154,7 @@ export class CommercialCoreService {
   async nextNumber(
     tx: Tx,
     organizationId: string,
-    docType: 'QUOTATION' | 'PI' | 'CI' | 'PL' | 'SI' | 'SHP' | 'FR',
+    docType: 'QUOTATION' | 'PI' | 'CI' | 'PL' | 'SI' | 'SHP' | 'FR' | 'RCV',
     prefix: string,
     yearlyReset: boolean,
     now = new Date(),
@@ -290,7 +290,9 @@ export class CommercialCoreService {
         | 'COMPLIANCE'
         | 'VALIDATION'
         | 'SHIPMENT'
-        | 'FREIGHT';
+        | 'FREIGHT'
+        | 'RECEIVABLE'
+        | 'PROFITABILITY';
       entityId: string;
       lineageId: string;
       type: string;
