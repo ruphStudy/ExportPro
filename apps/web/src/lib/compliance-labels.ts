@@ -1,3 +1,4 @@
+import type { DocumentExtractionStatus, DocumentValidationStatus, ExtractionConfidence, ExtractionProvenance, MissingDocumentState, ValidationFindingStatus, ValidationSeverity } from "@exportpro/types";
 import type { Applicability, ComplianceReadiness, ComplianceSeverity, CoverageLevel, DocumentAvailability, DocumentSource, DocumentStatus, ExpiryState, RequirementBasis, RequirementLevel, RequirementStatus, ResponsibleParty, TradeDocumentType } from "@exportpro/types";
 
 type Variant = "neutral" | "success" | "warning" | "danger" | "info";
@@ -59,6 +60,10 @@ export const DOC_TYPE: Record<TradeDocumentType, string> = {
   BILL_OF_LADING: "Bill of lading",
   AIRWAY_BILL: "Airway bill",
   REGISTRATION_CERTIFICATE: "Registration certificate",
+  PURCHASE_ORDER: "Purchase order (buyer copy)",
+  PROFORMA_INVOICE: "Proforma invoice (copy)",
+  CERTIFICATE: "Certificate",
+  OTHER_SHIPPING_DOCUMENT: "Other shipping document",
   OTHER: "Other",
 };
 export const DOC_STATUS: Record<DocumentStatus, { label: string; variant: Variant }> = {
@@ -106,4 +111,48 @@ export const EXPIRY: Record<NonNullable<ExpiryState>, { label: string; variant: 
   VALID: L("Valid", "success"),
   EXPIRING_SOON: L("Expires soon", "warning"),
   EXPIRED: L("Expired", "danger"),
+};
+
+
+export const EXTRACTION_STATUS: Record<DocumentExtractionStatus, { label: string; variant: Variant }> = {
+  PENDING: L("Pending", "neutral"),
+  PROCESSING: L("Processing", "info"),
+  COMPLETED: L("Extracted — review", "info"),
+  PARTIAL: L("Partly extracted — review", "warning"),
+  FAILED: L("Extraction failed", "danger"),
+  NEEDS_REVIEW: L("Needs review", "warning"),
+  CONFIRMED: L("Confirmed by reviewer", "success"),
+};
+export const VALIDATION_STATUS: Record<DocumentValidationStatus, { label: string; variant: Variant }> = {
+  NOT_RUN: L("Not validated", "neutral"),
+  PROCESSING: L("Validating", "info"),
+  NEEDS_REVIEW: L("Needs review", "warning"),
+  FAILED: L("Critical issues", "danger"),
+  PASSED: L("No issues found", "success"),
+  PASSED_WITH_WARNINGS: L("Warnings", "warning"),
+  REJECTED: L("Rejected", "danger"),
+  SIGNED_OFF: L("Signed off", "success"),
+};
+export const V_SEVERITY: Record<ValidationSeverity, { label: string; variant: Variant }> = { CRITICAL: L("Critical", "danger"), WARNING: L("Warning", "warning"), INFO: L("Info", "neutral") };
+export const FINDING_STATUS: Record<ValidationFindingStatus, string> = { OPEN: "Open", ACCEPTED_DIFFERENCE: "Accepted difference", CORRECTED: "Corrected", FALSE_POSITIVE: "False positive", RESOLVED: "Resolved" };
+export const CONFIDENCE: Record<ExtractionConfidence, Variant> = { HIGH: "success", MEDIUM: "info", LOW: "warning" };
+export const PROVENANCE: Record<ExtractionProvenance, string> = { AI_EXTRACTED: "AI extracted", RULE_EXTRACTED: "Parser extracted", USER_CONFIRMED: "Confirmed", USER_CORRECTED: "Corrected", USER_ENTERED: "Entered manually", STRUCTURED_SOURCE: "Structured source" };
+export const MISSING_STATE: Record<MissingDocumentState, { label: string; variant: Variant }> = {
+  AVAILABLE: L("Available", "success"),
+  MISSING_NOW: L("Missing now", "danger"),
+  EXPECTED_LATER: L("Expected later", "neutral"),
+  NOT_APPLICABLE: L("Not applicable", "neutral"),
+  UNKNOWN: L("Unknown", "warning"),
+};
+export const FIELD_LABEL: Record<string, string> = {
+  documentNumber: "Document no.", documentDate: "Document date", buyerName: "Buyer / importer", buyerAddress: "Buyer address", buyerCountry: "Buyer country",
+  exporterName: "Exporter / shipper", exporterAddress: "Exporter address", consigneeName: "Consignee", consigneeAddress: "Consignee address", notifyParty: "Notify party",
+  currency: "Currency", incoterm: "Incoterm", incotermPlace: "Incoterm place", poNumber: "PO number", quotationNumber: "Quotation no.", piNumber: "PI number", invoiceNumber: "Invoice number",
+  originCountry: "Origin country", destinationCountry: "Destination country", totalAmount: "Total amount", paymentTerms: "Payment terms", deliveryTerms: "Delivery terms",
+  carrier: "Carrier", vessel: "Vessel", voyage: "Voyage", containerNumbers: "Container no(s).", blNumber: "B/L number", awbNumber: "AWB number", portOfLoading: "Port of loading",
+  portOfDischarge: "Port of discharge", placeOfDelivery: "Place of delivery", etd: "ETD (as written)", eta: "ETA (as written)", packageCount: "Packages", grossWeightKg: "Gross weight (kg)",
+  netWeightKg: "Net weight (kg)", cargoDescription: "Cargo description", certificateNumber: "Certificate no.", certificateType: "Certificate type", issuer: "Issuer", issueDate: "Issue date",
+  expiryDate: "Expiry date", hsCode: "HS code", productDescription: "Product",
+  description: "Description", buyerSku: "Buyer SKU", quantity: "Quantity", unit: "Unit", unitPrice: "Unit price", total: "Line total", specification: "Specification", packaging: "Packaging",
+  countryOfOrigin: "Origin", packageType: "Package type", marks: "Marks", dimensions: "Dimensions", volumeCbm: "Volume (CBM)",
 };

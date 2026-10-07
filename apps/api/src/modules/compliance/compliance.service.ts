@@ -34,6 +34,7 @@ import {
   day,
 } from '../commercial/commercial-core.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { documentValidationStatuses } from '../document-validation/validation.service';
 import {
   applicability,
   buyerRequestMapping,
@@ -582,6 +583,11 @@ export class ComplianceService implements OnModuleInit {
       select: { id: true, rootId: true },
     }))
       rootOf.set(d.id, d.rootId);
+    const validation = await documentValidationStatuses(
+      this.prisma,
+      organizationId,
+      docs.map((x) => ({ id: x.id, version: x.version })),
+    );
     const items: {
       inst: Instance;
       status: RequirementStatus;
@@ -596,6 +602,7 @@ export class ComplianceService implements OnModuleInit {
         docs,
         rootOf,
         warnDays,
+        validation,
       });
       items.push({ inst, ...r });
       if (r.status !== inst.status)
@@ -626,7 +633,7 @@ export class ComplianceService implements OnModuleInit {
         where: { id: cl.id },
         data: { readiness: rd.readiness },
       });
-    return { items, rd, docs, warnDays };
+    return { items, rd, docs, warnDays, validation };
   }
 
   private derive(
@@ -642,6 +649,7 @@ export class ComplianceService implements OnModuleInit {
       docs: Prisma.TradeDocumentGetPayload<object>[];
       rootOf: Map<string, string>;
       warnDays: number;
+      validation: Map<string, { status: string; openIssues: number }>;
     },
   ): {
     status: RequirementStatus;
@@ -692,9 +700,18 @@ export class ComplianceService implements OnModuleInit {
         verificationNote: best.generated
           ? 'Prepared by exporter in ExportPro'
           : 'Reviewed as evidence only — authenticity not verified by ExportPro',
+        validationStatus: d.validation.get(best.id)?.status ?? 'NOT_RUN',
       });
       if (exp === 'EXPIRING_SOON') expiringSoon = true;
       const rk = rank(best);
+      // Requirements that need validated evidence: an approved document counts only once its consistency validation is signed off (never from an unreviewed extraction).
+      if (
+        rk === 6 &&
+        snap.satisfiedBy.kind === 'documents' &&
+        snap.satisfiedBy.requiresValidation &&
+        d.validation.get(best.id)?.status !== 'SIGNED_OFF'
+      )
+        return 'UNDER_REVIEW';
       return rk === 6
         ? 'SATISFIED'
         : rk === 5
@@ -823,7 +840,7 @@ export class ComplianceService implements OnModuleInit {
     cl: Checklist,
   ): Promise<ComplianceChecklistView> {
     const org = a.organizationId;
-    const { items, rd, docs } = await this.refresh(org, cl);
+    const { items, rd, docs, validation } = await this.refresh(org, cl);
     const ctx = cl.context as unknown as EvalContext & {
       incotermPlace: string | null;
       buyer: { id: string | null; name: string };
@@ -924,7 +941,7 @@ export class ComplianceService implements OnModuleInit {
         };
       },
     );
-    const documents = this.documentMatrix(requirements, docs);
+    const documents = this.documentMatrix(requirements, docs, validation);
     const can = (p: Parameters<typeof roleHasPermission>[1]) =>
       roleHasPermission(a.role, p);
     const actions: string[] = [];
@@ -1019,7 +1036,9 @@ export class ComplianceService implements OnModuleInit {
       case 'certification':
         return `A matching active certification in your profile, or an approved ${docs}.`;
       case 'documents':
-        return `An approved ${docs} for this order (not expired).`;
+        return s.satisfiedBy.requiresValidation
+          ? `An approved ${docs} for this order (not expired) whose document validation is signed off.`
+          : `An approved ${docs} for this order (not expired).`;
       default:
         return docs
           ? `An approved ${docs}, or manual confirmation by a reviewer.`
@@ -1031,6 +1050,7 @@ export class ComplianceService implements OnModuleInit {
   private documentMatrix(
     reqs: RequirementView[],
     docs: Prisma.TradeDocumentGetPayload<object>[],
+    validation: Map<string, { status: string; openIssues: number }>,
   ): ChecklistDocumentRow[] {
     const rows = new Map<string, ChecklistDocumentRow>();
     for (const r of reqs) {
@@ -1068,6 +1088,7 @@ export class ComplianceService implements OnModuleInit {
                 status: best.status as never,
                 source: best.source as never,
                 version: best.version,
+                validationStatus: validation.get(best.id)?.status ?? 'NOT_RUN',
               }
             : null,
         });
@@ -1275,7 +1296,10 @@ export class ComplianceService implements OnModuleInit {
       jurisdiction: 'TRANSACTION',
       responsibleParty: dto.responsibleParty ?? 'EXPORTER',
       satisfiedBy: dto.documentTypes?.length
-        ? { kind: 'documents' }
+        ? {
+            kind: 'documents',
+            requiresValidation: Boolean(dto.requiresValidation),
+          }
         : { kind: 'manual' },
       documentTypes: (dto.documentTypes ?? []) as TradeDocumentType[],
       provenance: {

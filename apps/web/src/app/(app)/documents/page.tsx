@@ -11,7 +11,7 @@ import { DOCUMENT_SOURCES, DOCUMENT_STATUSES, TRADE_DOCUMENT_TYPES } from "@expo
 import { poApi } from "@/lib/api/commercial";
 import { documentsApi, type DocumentListQuery } from "@/lib/api/compliance";
 import { ApiRequestError, toFriendlyErrorMessage } from "@/lib/api-client";
-import { DOC_STATUS, DOC_TYPE, EXPIRY, SOURCE } from "@/lib/compliance-labels";
+import { DOC_STATUS, DOC_TYPE, EXPIRY, EXTRACTION_STATUS, SOURCE, VALIDATION_STATUS } from "@/lib/compliance-labels";
 import { hasPermission } from "@/lib/permissions";
 import { useSession } from "@/lib/session";
 import { toast } from "@/lib/toast";
@@ -164,7 +164,7 @@ function Row({ d }: { d: TradeDocumentSummary }) {
       <td className="px-3 py-2"><Badge variant={SOURCE[d.source].variant}>{SOURCE[d.source].label}</Badge></td>
       <td className="max-w-[12rem] px-3 py-2">{d.purchaseOrder ? <Link className="text-primary hover:underline" href={`/purchase-orders/${d.purchaseOrder.id}`}>PO {d.purchaseOrder.poNumber}</Link> : "—"}<Caption className="block truncate">{d.buyer?.name ?? ""}</Caption></td>
       <td className="whitespace-nowrap px-3 py-2">{d.expiryDate ?? "—"}{d.expiry && d.expiry !== "VALID" && <Badge className="ml-1" variant={EXPIRY[d.expiry].variant}>{EXPIRY[d.expiry].label}</Badge>}</td>
-      <td className="px-3 py-2"><Badge variant={DOC_STATUS[d.status].variant}>{DOC_STATUS[d.status].label}</Badge></td>
+      <td className="px-3 py-2"><Badge variant={DOC_STATUS[d.status].variant}>{DOC_STATUS[d.status].label}</Badge>{d.validationStatus && d.validationStatus !== "NOT_RUN" ? <Caption className="mt-0.5 block">Validation: {VALIDATION_STATUS[d.validationStatus as keyof typeof VALIDATION_STATUS].label.toLowerCase()}{d.openIssues ? ` · ${d.openIssues} open` : ""}</Caption> : d.extractionStatus ? <Caption className="mt-0.5 block">{EXTRACTION_STATUS[d.extractionStatus as keyof typeof EXTRACTION_STATUS].label}</Caption> : null}</td>
     </tr>
   );
 }

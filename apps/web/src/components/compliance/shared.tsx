@@ -18,6 +18,7 @@ export function ComplianceSectionTabs() {
   const tabs = [
     { href: "/compliance", label: "Compliance", show: hasPermission(session, "compliance.view") },
     { href: "/documents", label: "Documents", show: hasPermission(session, "documents.view") },
+    { href: "/documents/validation", label: "Validation", show: hasPermission(session, "document_validation.view") },
     { href: "/documents/templates", label: "Templates", show: hasPermission(session, "documents.approve") },
   ].filter((t) => t.show);
   return (

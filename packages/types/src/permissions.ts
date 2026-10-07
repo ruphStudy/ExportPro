@@ -98,6 +98,12 @@ export const PERMISSIONS = [
   "documents.review",
   "documents.approve",
   "documents.generate",
+  "document_validation.view",
+  "document_validation.extract",
+  "document_validation.review",
+  "document_validation.resolve",
+  "document_validation.signoff",
+  "document_validation.override",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -207,6 +213,12 @@ export const ROLE_PERMISSIONS: Record<MembershipRole, readonly Permission[]> = {
     "documents.review",
     "documents.approve",
     "documents.generate",
+    "document_validation.view",
+    "document_validation.extract",
+    "document_validation.review",
+    "document_validation.resolve",
+    "document_validation.signoff",
+    "document_validation.override",
   ],
   // Same as OWNER except owner-only destructive actions (transfer
   // ownership, delete organization) are enforced by explicit role
@@ -304,6 +316,12 @@ export const ROLE_PERMISSIONS: Record<MembershipRole, readonly Permission[]> = {
     "documents.review",
     "documents.approve",
     "documents.generate",
+    "document_validation.view",
+    "document_validation.extract",
+    "document_validation.review",
+    "document_validation.resolve",
+    "document_validation.signoff",
+    "document_validation.override",
   ],
   // Can run the exporter-onboarding wizard and opportunity discovery day
   // to day, but not manage team membership or organization identity.
@@ -391,6 +409,12 @@ export const ROLE_PERMISSIONS: Record<MembershipRole, readonly Permission[]> = {
     "documents.review",
     "documents.approve",
     "documents.generate",
+    "document_validation.view",
+    "document_validation.extract",
+    "document_validation.review",
+    "document_validation.resolve",
+    "document_validation.signoff",
+    "document_validation.override",
   ],
   SALES: [
     "organization.view",
@@ -447,6 +471,7 @@ export const ROLE_PERMISSIONS: Record<MembershipRole, readonly Permission[]> = {
     "purchase_orders.review",
     "compliance.view",
     "documents.view",
+    "document_validation.view",
   ],
   // Classification support: can run analyses, answer clarifications and
   // pre-select candidates, but confirming/saving stays with managers.
@@ -485,10 +510,15 @@ export const ROLE_PERMISSIONS: Record<MembershipRole, readonly Permission[]> = {
     "documents.review",
     "documents.generate",
     "documents.upload",
+    "document_validation.view",
+    "document_validation.extract",
+    "document_validation.review",
+    "document_validation.resolve",
+    "document_validation.signoff",
   ],
-  LOGISTICS: ["organization.view", "team.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view", "products.view", "product_intelligence.view", "country_intelligence.view", "comparisons.view", "recommendations.view", "buyers.view", "crm.view", "outreach.view", "costing.view", "costing.edit_logistics", "costing.calculate", "inquiries.view", "quotations.view", "proforma_invoice.view", "purchase_orders.view", "compliance.view", "documents.view", "documents.edit_logistics"],
-  FINANCE: ["organization.view", "team.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view", "products.view", "product_intelligence.view", "country_intelligence.view", "comparisons.view", "recommendations.view", "buyers.view", "crm.view", "outreach.view", "costing.view", "costing.create", "costing.edit", "costing.calculate", "costing.ready", "inquiries.view", "quotations.view", "proforma_invoice.view", "proforma_invoice.create", "proforma_invoice.edit", "proforma_invoice.issue", "purchase_orders.view", "commercial.settings", "compliance.view", "documents.view"],
-  VIEWER: ["organization.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view", "products.view", "product_intelligence.view", "country_intelligence.view", "comparisons.view", "recommendations.view", "buyers.view", "crm.view", "outreach.view", "costing.view", "inquiries.view", "quotations.view", "proforma_invoice.view", "purchase_orders.view", "compliance.view", "documents.view"],
+  LOGISTICS: ["organization.view", "team.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view", "products.view", "product_intelligence.view", "country_intelligence.view", "comparisons.view", "recommendations.view", "buyers.view", "crm.view", "outreach.view", "costing.view", "costing.edit_logistics", "costing.calculate", "inquiries.view", "quotations.view", "proforma_invoice.view", "purchase_orders.view", "compliance.view", "documents.view", "documents.edit_logistics", "document_validation.view", "document_validation.review"],
+  FINANCE: ["organization.view", "team.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view", "products.view", "product_intelligence.view", "country_intelligence.view", "comparisons.view", "recommendations.view", "buyers.view", "crm.view", "outreach.view", "costing.view", "costing.create", "costing.edit", "costing.calculate", "costing.ready", "inquiries.view", "quotations.view", "proforma_invoice.view", "proforma_invoice.create", "proforma_invoice.edit", "proforma_invoice.issue", "purchase_orders.view", "commercial.settings", "compliance.view", "documents.view", "document_validation.view", "document_validation.review"],
+  VIEWER: ["organization.view", "profile.view", "onboarding.view", "readiness.view", "opportunities.view", "products.view", "product_intelligence.view", "country_intelligence.view", "comparisons.view", "recommendations.view", "buyers.view", "crm.view", "outreach.view", "costing.view", "inquiries.view", "quotations.view", "proforma_invoice.view", "purchase_orders.view", "compliance.view", "documents.view", "document_validation.view"],
 };
 
 export function roleHasPermission(role: MembershipRole, permission: Permission): boolean {

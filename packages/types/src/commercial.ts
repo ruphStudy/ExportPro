@@ -100,7 +100,7 @@ export interface CommercialEvent {
   id: string;
   type: string;
   title: string;
-  entityType: "QUOTATION" | "PI" | "PO" | "DOCUMENT" | "COMPLIANCE";
+  entityType: "QUOTATION" | "PI" | "PO" | "DOCUMENT" | "COMPLIANCE" | "VALIDATION";
   entityId: string;
   actor: string | null;
   createdAt: string;

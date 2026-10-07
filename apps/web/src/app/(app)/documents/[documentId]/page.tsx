@@ -13,6 +13,7 @@ import { DOC_STATUS, DOC_TYPE, EXPIRY, PARTY, REQ_STATUS, SOURCE } from "@/lib/c
 import { ReasonDialog } from "@/components/commercial/shared";
 import { CommercialInvoiceEditor, DocumentPreview, PackingListEditor, ShippingInstructionEditor } from "@/components/compliance/document-editors";
 import { useComplianceMutation } from "@/components/compliance/shared";
+import { ExtractionValidationSection } from "@/components/document-validation/extraction-panel";
 import { UploadDocumentDialog } from "@/components/compliance/upload-dialog";
 import { RequirePermission } from "@/components/layout/require-permission";
 import { Badge } from "@/components/ui/badge";
@@ -60,6 +61,7 @@ function DocumentView() {
           ) : (
             <ExternalMetadata key={d.rowVersion} d={d} />
           )}
+          <ExtractionValidationSection key={`xv-${d.id}-${d.version}`} doc={d} />
           {d.differences.length > 0 && (
             <Card className="p-4">
               <SectionTitle className="text-base">Changes from previous version</SectionTitle>

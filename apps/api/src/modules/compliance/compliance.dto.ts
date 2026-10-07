@@ -79,6 +79,8 @@ export class AddRequirementDto {
   @IsIn(TRADE_DOCUMENT_TYPES, { each: true })
   documentTypes?: string[];
   @IsOptional() @IsString() @MaxLength(2000) notes?: string;
+  /** Evidence must also have a signed-off document validation (Sprint 17). */
+  @IsOptional() @IsBoolean() requiresValidation?: boolean;
 }
 
 export class MarkReadyDto extends VersionDto {

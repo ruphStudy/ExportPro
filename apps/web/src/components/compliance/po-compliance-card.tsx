@@ -3,7 +3,8 @@
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { complianceApi, documentsApi } from "@/lib/api/compliance";
-import { DOC_STATUS, DOC_TYPE, READINESS } from "@/lib/compliance-labels";
+import { validationApi } from "@/lib/api/document-validation";
+import { DOC_STATUS, DOC_TYPE, READINESS, VALIDATION_STATUS } from "@/lib/compliance-labels";
 import { hasPermission } from "@/lib/permissions";
 import { useSession } from "@/lib/session";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +43,31 @@ export function PoComplianceCard({ purchaseOrderId }: { purchaseOrderId: string 
         {canC && <Button asChild size="sm" variant="outline"><Link href={`/compliance/orders/${purchaseOrderId}`}>View compliance</Link></Button>}
         {canD && <Button asChild size="sm" variant="ghost"><Link href={`/documents?purchaseOrderId=${purchaseOrderId}`}>Documents</Link></Button>}
       </div>
+    </Card>
+  );
+}
+
+/** PO detail → document validation package status (Sprint 17). */
+export function PoValidationCard({ purchaseOrderId }: { purchaseOrderId: string }) {
+  const { data: session } = useSession();
+  const can = hasPermission(session, "document_validation.view");
+  const q = useQuery({ queryKey: ["validation", "package", purchaseOrderId], queryFn: () => validationApi.packageView(purchaseOrderId), enabled: can });
+  if (!can) return null;
+  const p = q.data;
+  const missingNow = p?.missing.filter((m) => m.state === "MISSING_NOW").length ?? 0;
+  return (
+    <Card className="flex flex-col gap-2 p-4 text-sm">
+      <SectionTitle className="text-base">Document validation</SectionTitle>
+      {q.isLoading ? <HelperText>Loading…</HelperText> : !p ? <HelperText>Unavailable.</HelperText> : (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Badge variant={VALIDATION_STATUS[p.status].variant}>{VALIDATION_STATUS[p.status].label}</Badge>
+          {p.latestRun && p.latestRun.counts.openCritical > 0 && <Badge variant="danger">{p.latestRun.counts.openCritical} critical</Badge>}
+          {p.completeness.warnings > 0 && <Badge variant="warning">{p.completeness.warnings} warning{p.completeness.warnings === 1 ? "" : "s"}</Badge>}
+          {missingNow > 0 && <Badge variant="danger">{missingNow} missing now</Badge>}
+          <Caption>{p.completeness.expectedLater} expected later</Caption>
+        </div>
+      )}
+      <Button asChild size="sm" variant="outline" className="self-start"><Link href={`/documents/validation/orders/${purchaseOrderId}`}>View validation</Link></Button>
     </Card>
   );
 }

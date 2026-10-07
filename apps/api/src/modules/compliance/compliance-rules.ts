@@ -30,7 +30,7 @@ export type SatisfiedBy =
       acceptNotApplicable?: boolean;
     }
   | { kind: 'certification'; types: string[]; names: string[] }
-  | { kind: 'documents' }
+  | { kind: 'documents'; requiresValidation?: boolean }
   | { kind: 'manual' };
 
 export interface RuleDef {

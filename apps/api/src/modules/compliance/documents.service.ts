@@ -46,6 +46,7 @@ import {
   TemplateDto,
   UpdateDocumentDto,
 } from './compliance.dto';
+import { documentValidationStatuses } from '../document-validation/validation.service';
 import { expiryState } from './compliance.service';
 import {
   computeTotals,
@@ -1318,7 +1319,30 @@ export class DocumentsService {
       }),
       this.core.userNames(rows.map((r) => r.createdByUserId)),
     ]);
+    const [validation, extractions] = await Promise.all([
+      documentValidationStatuses(
+        this.prisma,
+        organizationId,
+        rows.map((r) => ({ id: r.id, version: r.version })),
+      ),
+      this.prisma.documentExtraction.findMany({
+        where: {
+          organizationId,
+          tradeDocumentId: { in: rows.map((r) => r.id) },
+        },
+        orderBy: { extractionVersion: 'desc' },
+        select: { tradeDocumentId: true, documentVersion: true, status: true },
+      }),
+    ]);
     return rows.map((r) => ({
+      extractionStatus: r.generated
+        ? null
+        : (extractions.find(
+            (x) =>
+              x.tradeDocumentId === r.id && x.documentVersion === r.version,
+          )?.status ?? null),
+      validationStatus: validation.get(r.id)?.status ?? 'NOT_RUN',
+      openIssues: validation.get(r.id)?.openIssues ?? 0,
       id: r.id,
       rootId: r.rootId,
       documentType: r.documentType as TradeDocumentSummary['documentType'],

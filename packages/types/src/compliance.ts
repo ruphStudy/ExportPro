@@ -57,6 +57,10 @@ export const TRADE_DOCUMENT_TYPES = [
   "BILL_OF_LADING",
   "AIRWAY_BILL",
   "REGISTRATION_CERTIFICATE",
+  "PURCHASE_ORDER",
+  "PROFORMA_INVOICE",
+  "CERTIFICATE",
+  "OTHER_SHIPPING_DOCUMENT",
   "OTHER",
 ] as const;
 export type TradeDocumentType = (typeof TRADE_DOCUMENT_TYPES)[number];
@@ -117,6 +121,8 @@ export interface RequirementEvidence {
   expiryDate: string | null;
   /** Conservative verification wording (e.g. "User declared — not government verified"). */
   verificationNote: string | null;
+  /** Sprint 17 consistency validation state of a document (never authenticity). */
+  validationStatus?: string | null;
 }
 
 export interface RequirementView {
@@ -164,7 +170,7 @@ export interface ChecklistDocumentRow {
   responsibleParty: ResponsibleParty;
   generatable: boolean;
   availability: DocumentAvailability;
-  document: { id: string; title: string; status: DocumentStatus; source: DocumentSource; version: number } | null;
+  document: { id: string; title: string; status: DocumentStatus; source: DocumentSource; version: number; validationStatus?: string | null } | null;
 }
 
 export interface ComplianceChecklistView {
@@ -345,6 +351,10 @@ export interface TradeDocumentSummary {
   countryCode: string | null;
   createdBy: string | null;
   updatedAt: string;
+  /** Sprint 17 indicators (extraction is advisory; validation is consistency only). */
+  extractionStatus?: string | null;
+  validationStatus?: string;
+  openIssues?: number;
 }
 
 export interface TradeDocumentDetail extends TradeDocumentSummary {

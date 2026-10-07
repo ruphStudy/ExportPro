@@ -8,7 +8,7 @@ import * as React from "react";
 import type { ComplianceChecklistView, RequirementView, TradeDocumentType } from "@exportpro/types";
 import { countryLabel, REQUIREMENT_LEVELS, REQUIREMENT_TYPES, RESPONSIBLE_PARTIES, TRADE_DOCUMENT_TYPES } from "@exportpro/types";
 import { complianceApi, documentsApi } from "@/lib/api/compliance";
-import { APPLICABILITY, AVAILABILITY, BASIS, COVERAGE, DOC_TYPE, LEVEL, PARTY, READINESS, REQ_STATUS, SEVERITY, SOURCE } from "@/lib/compliance-labels";
+import { APPLICABILITY, AVAILABILITY, BASIS, COVERAGE, DOC_TYPE, LEVEL, PARTY, READINESS, REQ_STATUS, SEVERITY, SOURCE, VALIDATION_STATUS } from "@/lib/compliance-labels";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -171,7 +171,7 @@ function RequirementRow({ r, d, onUpload }: { r: RequirementView; d: ComplianceC
           {r.evidence.map((e, i) => (
             <li key={`${e.id}-${i}`}>
               {e.kind === "DOCUMENT" && e.id ? <Link className="text-primary hover:underline" href={`/documents/${e.id}`}>{e.label}</Link> : <span>{e.label}</span>}
-              <Caption> · {e.status.replace(/_/g, " ").toLowerCase()}{e.expiryDate ? ` · expires ${e.expiryDate}` : ""}{e.verificationNote ? ` · ${e.verificationNote}` : ""}</Caption>
+              <Caption> · {e.status.replace(/_/g, " ").toLowerCase()}{e.expiryDate ? ` · expires ${e.expiryDate}` : ""}{e.verificationNote ? ` · ${e.verificationNote}` : ""}{e.validationStatus ? ` · validation: ${VALIDATION_STATUS[e.validationStatus as keyof typeof VALIDATION_STATUS]?.label.toLowerCase() ?? e.validationStatus}` : ""}</Caption>
             </li>
           ))}
         </ul>
@@ -282,7 +282,7 @@ function DocumentMatrix({ d, onUpload }: { d: ComplianceChecklistView; onUpload:
                 <Badge variant={AVAILABILITY[x.availability].variant}>{AVAILABILITY[x.availability].label}</Badge>
               </div>
               <Caption className="block">{LEVEL[x.level].label} · {BASIS[x.basis]} · {PARTY[x.responsibleParty]}{x.generatable ? " · ExportPro can prepare it" : " · upload/reference only"}</Caption>
-              {x.document && <Caption className="block"><Link className="text-primary hover:underline" href={`/documents/${x.document.id}`}>{x.document.title} v{x.document.version}</Link> · {SOURCE[x.document.source].label}</Caption>}
+              {x.document && <Caption className="block"><Link className="text-primary hover:underline" href={`/documents/${x.document.id}`}>{x.document.title} v{x.document.version}</Link> · {SOURCE[x.document.source].label}{x.document.validationStatus ? ` · validation: ${VALIDATION_STATUS[x.document.validationStatus as keyof typeof VALIDATION_STATUS]?.label.toLowerCase() ?? x.document.validationStatus}` : ""}</Caption>}
               {!x.document && d.purchaseOrder && (x.generatable ? d.availableActions.includes("generate_documents") : d.availableActions.includes("upload_documents")) && (
                 <Button size="sm" variant="ghost" className="mt-1" onClick={() => (x.generatable ? router.push(`/documents?generate=1&purchaseOrderId=${d.purchaseOrder!.id}&documentType=${x.documentType}`) : onUpload({ documentType: x.documentType, allowedTypes: [x.documentType], purchaseOrderId: d.purchaseOrder!.id }))}>
                   {x.generatable ? "Prepare" : "Upload"}

@@ -512,6 +512,8 @@ model Organization {
   complianceChecklists ComplianceChecklist[]
   tradeDocuments       TradeDocument[]
   documentTemplates    DocumentTemplate[]
+  documentExtractions  DocumentExtraction[]
+  documentValidationRuns DocumentValidationRun[]
   quotations           Quotation[]
   proformaInvoices     ProformaInvoice[]
   purchaseOrders       BuyerPurchaseOrder[]
@@ -3289,6 +3291,9 @@ model TradeDocument {
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
 
+  extractions    DocumentExtraction[]
+  confirmedData  DocumentConfirmedData[]
+
   @@unique([organizationId, documentType, documentNumber, version])
   @@index([organizationId, documentType])
   @@index([organizationId, purchaseOrderId])
@@ -3314,4 +3319,154 @@ model DocumentTemplate {
 
   @@unique([organizationId, documentType])
   @@map("document_templates")
+}
+
+// --- Sprint 17: document extraction & cross-document validation ----------
+
+/// Immutable extraction attempt for one TradeDocument version. `result` is never
+/// edited after completion; human review is stored in DocumentConfirmedData.
+model DocumentExtraction {
+  id                     String        @id @default(cuid())
+  organizationId         String
+  organization           Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  tradeDocumentId        String
+  tradeDocument          TradeDocument @relation(fields: [tradeDocumentId], references: [id], onDelete: Cascade)
+  documentVersion        Int
+  extractionVersion      Int
+  /// version + provider + schema + prompt; reused unless force=true.
+  cacheKey               String
+  providerType           String
+  providerName           String
+  providerModel          String?
+  promptVersion          String?
+  schemaVersion          String
+  status                 String
+  textAvailability       String
+  detectedDocumentType   String?
+  documentTypeConfidence String?
+  result                 Json?
+  /// Structured provider response (no model reasoning).
+  rawStructuredOutput    Json?
+  overallConfidence      Int?
+  warnings               Json          @default("[]")
+  errorMessage           String?
+  startedAt              DateTime      @default(now())
+  completedAt            DateTime?
+  createdByUserId        String?
+  createdAt              DateTime      @default(now())
+
+  confirmations DocumentConfirmedData[]
+
+  @@unique([tradeDocumentId, extractionVersion])
+  @@index([organizationId, cacheKey])
+  @@map("document_extractions")
+}
+
+/// Human-reviewed structured data (corrections stored here, never on the extraction).
+model DocumentConfirmedData {
+  id                    String              @id @default(cuid())
+  organizationId        String
+  tradeDocumentId       String
+  tradeDocument         TradeDocument       @relation(fields: [tradeDocumentId], references: [id], onDelete: Cascade)
+  documentVersion       Int
+  extractionId          String?
+  extraction            DocumentExtraction? @relation(fields: [extractionId], references: [id], onDelete: SetNull)
+  confirmedDocumentType String
+  data                  Json
+  correctionCount       Int                 @default(0)
+  note                  String?
+  reviewedByUserId      String
+  reviewedAt            DateTime            @default(now())
+
+  @@index([tradeDocumentId])
+  @@index([organizationId])
+  @@map("document_confirmed_data")
+}
+
+/// One deterministic validation run (document-level or whole PO package). Never rewritten.
+model DocumentValidationRun {
+  id                 String       @id @default(cuid())
+  organizationId     String
+  organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  runNumber          Int
+  scope              String
+  purchaseOrderId    String?
+  primaryDocumentId  String?
+  documentIds        String[]     @default([])
+  /// Documents/versions/data sources used and comparison pairs.
+  documents          Json
+  ruleVersion        String
+  status             String
+  resultSummary      Json
+  errorCount         Int          @default(0)
+  warningCount       Int          @default(0)
+  infoCount          Int          @default(0)
+  createdByUserId    String
+  createdAt          DateTime     @default(now())
+  signedOffByUserId  String?
+  signedOffAt        DateTime?
+  signoffNote        String?
+  signoffUnresolvedWarnings  Int?
+  signoffUnresolvedCritical  Int?
+  signoffOverrideReason      String?
+  rejectedByUserId   String?
+  rejectedAt         DateTime?
+  rejectionReason    String?
+
+  findings DocumentValidationFinding[]
+  comments DocumentValidationComment[]
+
+  @@index([organizationId, purchaseOrderId])
+  @@index([organizationId, primaryDocumentId])
+  @@map("document_validation_runs")
+}
+
+model DocumentValidationFinding {
+  id                  String                @id @default(cuid())
+  organizationId      String
+  runId               String
+  run                 DocumentValidationRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  signature           String
+  type                String
+  severity            String
+  field               String
+  itemReference       String?
+  sourceDocumentId    String?
+  sourceLabel         String
+  referenceDocumentId String?
+  referenceLabel      String?
+  sourceField         String?
+  referenceField      String?
+  rule                String
+  expectedValue       String?
+  actualValue         String?
+  normalizedExpected  String?
+  normalizedActual    String?
+  message             String
+  status              String                @default("OPEN")
+  resolutionNote      String?
+  resolvedByUserId    String?
+  resolvedAt          DateTime?
+  carriedFromRun      Int?
+
+  comments DocumentValidationComment[]
+
+  @@unique([runId, signature])
+  @@index([organizationId])
+  @@map("document_validation_findings")
+}
+
+model DocumentValidationComment {
+  id             String                     @id @default(cuid())
+  organizationId String
+  runId          String
+  run            DocumentValidationRun      @relation(fields: [runId], references: [id], onDelete: Cascade)
+  findingId      String?
+  finding        DocumentValidationFinding? @relation(fields: [findingId], references: [id], onDelete: Cascade)
+  body           String
+  authorUserId   String
+  createdAt      DateTime                   @default(now())
+
+  @@index([runId])
+  @@map("document_validation_comments")
 }

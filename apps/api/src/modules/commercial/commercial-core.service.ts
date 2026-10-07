@@ -282,7 +282,8 @@ export class CommercialCoreService {
     tx: Tx | PrismaService,
     a: { organizationId: string; userId: string | null },
     e: {
-      entityType: 'QUOTATION' | 'PI' | 'PO' | 'DOCUMENT' | 'COMPLIANCE';
+      entityType:
+        'QUOTATION' | 'PI' | 'PO' | 'DOCUMENT' | 'COMPLIANCE' | 'VALIDATION';
       entityId: string;
       lineageId: string;
       type: string;
