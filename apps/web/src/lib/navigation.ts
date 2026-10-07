@@ -118,11 +118,12 @@ export const NAV_ITEMS: NavItem[] = [
     description: "Manage inbound and outbound inquiries.",
   },
   {
-    label: "Costing & Quotations",
+    label: "Export Costing",
     href: "/costing",
     icon: Calculator,
-    status: "placeholder",
-    description: "Build costing sheets, quotations, and proforma invoices.",
+    status: "active",
+    permission: "costing.view",
+    description: "Export cost sheets, Incoterm® pricing, margins and scenario comparison.",
   },
   {
     label: "Documents & Compliance",

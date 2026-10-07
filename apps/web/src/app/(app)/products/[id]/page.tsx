@@ -25,6 +25,7 @@ import { HsCodeSearch } from "@/components/products/hs-code-search";
 import { Badge } from "@/components/ui/badge";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { FindBuyersButton } from "@/components/buyers/buyer-bits";
+import { CreateCostingButton } from "@/components/costing/costing-entry";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ErrorState } from "@/components/ui/error-state";
@@ -259,6 +260,7 @@ function ProductDetailContent() {
                     </Link>
                   </Button>
                   <FindBuyersButton productId={p.id} size="md" className="mt-2 w-full" />
+                  <CreateCostingButton productId={p.id} size="md" className="mt-2 w-full" />
                 </>
               )}
             </Card>

@@ -23,6 +23,7 @@ import { CountryIntelligenceModule } from './modules/country-intelligence/countr
 import { ComparisonsModule } from './modules/comparisons/comparisons.module';
 import { TradeDataModule } from './modules/trade-data/trade-data.module';
 import { BuyersModule } from './modules/buyers/buyers.module';
+import { CostingModule } from './modules/costing/costing.module';
 import { CrmModule } from './modules/crm/crm.module';
 import { OutreachModule } from './modules/outreach/outreach.module';
 import { DevModule } from './modules/dev/dev.module';
@@ -57,6 +58,7 @@ import { DevModule } from './modules/dev/dev.module';
     ComparisonsModule,
     TradeDataModule,
     BuyersModule,
+    CostingModule,
     CrmModule,
     OutreachModule,
     // Dev-only mailbox for reading OTP/reset emails without a real mail provider.

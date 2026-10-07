@@ -43,6 +43,7 @@ import { RequirePermission } from "@/components/layout/require-permission";
 import { OutreachHistoryCard, StartOutreachButton } from "@/components/outreach/outreach-history";
 import { Badge } from "@/components/ui/badge";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
+import { LeadCostingsCard } from "@/components/costing/costing-entry";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ErrorState } from "@/components/ui/error-state";
@@ -99,6 +100,7 @@ function LeadDetail() {
         </div>
         <aside className="flex min-w-0 flex-col gap-5" aria-label="Lead details">
           <NextActionCard key={`na-${l.version}`} lead={l} />
+          <LeadCostingsCard leadId={l.id} />
           <RemindersCard lead={l} reminders={d.reminders} tasks={d.tasks} members={memberList} />
           <DealCard key={`deal-${l.version}`} lead={l} />
           <QualificationCard key={`q-${l.version}`} lead={l} />

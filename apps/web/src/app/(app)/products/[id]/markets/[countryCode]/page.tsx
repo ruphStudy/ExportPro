@@ -27,6 +27,7 @@ import { ProvenanceBadge } from "@/components/provenance/provenance";
 import { Badge } from "@/components/ui/badge";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { FindBuyersButton } from "@/components/buyers/buyer-bits";
+import { CreateCostingButton } from "@/components/costing/costing-entry";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -144,6 +145,7 @@ function Header({ a }: { a: MarketDeepAnalysis }) {
       </div>
       <div className="flex flex-wrap gap-2">
         <FindBuyersButton productId={a.product.id} country={a.country.code} variant="primary" />
+        <CreateCostingButton productId={a.product.id} country={a.country.code} />
         <Button asChild variant="outline" size="sm" className="w-fit">
           <Link href={`/compare/markets?product=${a.product.id}&countries=${a.country.code}`}>Compare this market</Link>
         </Button>

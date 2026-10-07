@@ -504,6 +504,8 @@ model Organization {
   outreachTemplates    OutreachTemplate[]
   outreachCampaigns    OutreachCampaign[]
   outreachSuppressions OutreachSuppression[]
+  exportCostings       ExportCosting[]
+  fxRateSnapshots      FxRateSnapshot[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -962,6 +964,7 @@ model OrganizationProduct {
   productInterests  ProductInterest[]
   buyerStates       OrganizationBuyer[]
   buyerLeads        BuyerLead[]
+  exportCostings    ExportCosting[]
   outreachCampaigns OutreachCampaign[]
 
   createdByUserId String
@@ -1406,6 +1409,7 @@ model BuyerCompany {
   contacts           BuyerContact[]
   orgStates          OrganizationBuyer[]
   leads              BuyerLead[]
+  exportCostings     ExportCosting[]
   outreachRecipients CampaignRecipient[]
   duplicatesA        BuyerDuplicateCandidate[] @relation("DuplicateA")
   duplicatesB        BuyerDuplicateCandidate[] @relation("DuplicateB")
@@ -1601,6 +1605,7 @@ model BuyerLead {
   comments     LeadComment[]
   tags         LeadTagAssignment[]
   attachments  LeadAttachment[]
+  costings     ExportCosting[]
 
   @@unique([organizationId, buyerCompanyId, contextKey])
   @@index([organizationId])
@@ -2182,4 +2187,273 @@ model OutreachSuppression {
 
   @@unique([organizationId, address])
   @@map("outreach_suppressions")
+}
+
+// --- Sprint 14: export costing, pricing & Incoterms ---------------------
+
+enum CostingStatus {
+  DRAFT
+  READY
+  LOCKED
+  ARCHIVED
+}
+
+enum CostCategory {
+  PROCUREMENT
+  PACKAGING
+  INLAND_TRANSPORT
+  INSPECTION
+  CHA
+  CUSTOMS
+  PORT
+  FREIGHT
+  INSURANCE
+  BANKING
+  CERTIFICATES
+  MISCELLANEOUS
+}
+
+enum CostBasis {
+  FIXED
+  PER_UNIT
+  PER_KG
+  PER_MT
+  PER_CARTON
+  PER_CONTAINER
+  PERCENTAGE
+}
+
+enum PercentageBase {
+  PROCUREMENT_VALUE
+  PRE_INSURANCE_COST
+}
+
+enum CostSourceType {
+  USER_ENTERED
+  SUPPLIER_QUOTE
+  FREIGHT_QUOTE
+  SYSTEM_DERIVED
+  PUBLIC_DATA
+  IMPORTED
+  DEMO
+}
+
+enum CostConfidence {
+  CONFIRMED
+  ESTIMATE
+  UNKNOWN
+}
+
+enum FreightQuoteType {
+  MANUAL_ESTIMATE
+  FORWARDER_QUOTE
+  PROVIDER_RATE
+  ACTUAL
+}
+
+enum TransportMode {
+  SEA
+  AIR
+  ROAD
+  RAIL
+  MULTIMODAL
+  OTHER
+}
+
+enum Incoterm {
+  EXW
+  FCA
+  FOB
+  CFR
+  CIF
+}
+
+enum CostingQuantityUnit {
+  KG
+  MT
+  UNIT
+  CARTON
+  CONTAINER
+}
+
+enum PricingMode {
+  MARGIN
+  MARKUP
+  TARGET_PRICE
+}
+
+enum FxSourceType {
+  MANUAL
+  PUBLIC_API
+  COMMERCIAL_PROVIDER
+  BANK_RATE
+  DEMO
+}
+
+enum CostingSnapshotKind {
+  READY
+  LOCKED
+}
+
+/// Organization-scoped FX rate: 1 baseCurrency = rate × quoteCurrency.
+/// Immutable once created — "Refresh FX" creates a new snapshot.
+model FxRateSnapshot {
+  id              String       @id @default(cuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  baseCurrency    String
+  quoteCurrency   String
+  rate            Decimal      @db.Decimal(24, 10)
+  sourceType      FxSourceType @default(MANUAL)
+  sourceLabel     String?
+  sourceDate      DateTime
+  capturedAt      DateTime     @default(now())
+  isManual        Boolean      @default(true)
+  createdByUserId String?
+
+  scenarioSelections CostingScenarioFx[]
+
+  @@index([organizationId, baseCurrency, quoteCurrency, capturedAt])
+  @@map("fx_rate_snapshots")
+}
+
+model ExportCosting {
+  id                     String               @id @default(cuid())
+  organizationId         String
+  organization           Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  reference              String
+  name                   String
+  status                 CostingStatus        @default(DRAFT)
+  /// Revision number within the root chain (1, 2, …).
+  version                Int                  @default(1)
+  rootId                 String?
+  revisionOfId           String?
+  /// Optimistic-concurrency counter; every mutation increments it.
+  rowVersion             Int                  @default(0)
+  productId              String?
+  product                OrganizationProduct? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  buyerCompanyId         String?
+  buyerCompany           BuyerCompany?        @relation(fields: [buyerCompanyId], references: [id], onDelete: SetNull)
+  crmLeadId              String?
+  crmLead                BuyerLead?           @relation(fields: [crmLeadId], references: [id], onDelete: SetNull)
+  destinationCountryCode String?
+  calculationCurrency    String               @default("INR")
+  quoteCurrency          String               @default("USD")
+  thinMarginPercent      Decimal              @default(8) @db.Decimal(6, 2)
+  notes                  String?
+  createdByUserId        String
+  updatedByUserId        String?
+  readyAt                DateTime?
+  lockedAt               DateTime?
+  lockedByUserId         String?
+  archivedAt             DateTime?
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+
+  scenarios CostingScenario[]
+  snapshots CostingSnapshot[]
+
+  @@unique([organizationId, reference])
+  @@index([organizationId, status])
+  @@index([organizationId, updatedAt])
+  @@index([organizationId, productId])
+  @@index([organizationId, buyerCompanyId])
+  @@index([organizationId, crmLeadId])
+  @@map("export_costings")
+}
+
+/// Each scenario owns its own cost lines, so editing one never mutates another.
+model CostingScenario {
+  id               String              @id @default(cuid())
+  costingId        String
+  costing          ExportCosting       @relation(fields: [costingId], references: [id], onDelete: Cascade)
+  name             String
+  isBase           Boolean             @default(false)
+  sortOrder        Int                 @default(0)
+  quantity         Decimal             @db.Decimal(20, 4)
+  quantityUnit     CostingQuantityUnit
+  netWeightKg      Decimal?            @db.Decimal(20, 4)
+  cartonCount      Decimal?            @db.Decimal(20, 4)
+  containerCount   Decimal?            @db.Decimal(20, 4)
+  incoterm         Incoterm            @default(FOB)
+  incotermPlace    String?
+  originPort       String?
+  destinationPort  String?
+  transportMode    TransportMode?
+  supplierLabel    String?
+  pricingMode      PricingMode         @default(MARGIN)
+  pricingValue     Decimal?            @db.Decimal(20, 6)
+  buyerTargetPrice Decimal?            @db.Decimal(20, 6)
+  notes            String?
+  /// Cached deterministic result (formula version inside); recomputed on every change.
+  result           Json?
+  calculatedAt     DateTime?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  lines CostingLineItem[]
+  fx    CostingScenarioFx[]
+
+  @@index([costingId])
+  @@map("costing_scenarios")
+}
+
+model CostingScenarioFx {
+  id         String          @id @default(cuid())
+  scenarioId String
+  scenario   CostingScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  /// The non-calculation currency this snapshot converts.
+  currency   String
+  snapshotId String
+  snapshot   FxRateSnapshot  @relation(fields: [snapshotId], references: [id], onDelete: Restrict)
+
+  @@unique([scenarioId, currency])
+  @@map("costing_scenario_fx")
+}
+
+model CostingLineItem {
+  id               String            @id @default(cuid())
+  scenarioId       String
+  scenario         CostingScenario   @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  category         CostCategory
+  label            String
+  /// null = NOT PROVIDED (distinct from an entered 0).
+  amount           Decimal?          @db.Decimal(20, 6)
+  currency         String
+  basis            CostBasis         @default(FIXED)
+  percentageBase   PercentageBase?
+  wastagePercent   Decimal?          @db.Decimal(8, 4)
+  sourceType       CostSourceType    @default(USER_ENTERED)
+  confidence       CostConfidence    @default(ESTIMATE)
+  freightQuoteType FreightQuoteType?
+  quoteReference   String?
+  carrier          String?
+  transitDays      Int?
+  quoteDate        DateTime?
+  validUntil       DateTime?
+  routeNotes       String?
+  notes            String?
+  includeOverride  Boolean?
+  sortOrder        Int               @default(0)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@index([scenarioId])
+  @@map("costing_line_items")
+}
+
+/// Immutable record of inputs + FX + results at READY/LOCK time.
+model CostingSnapshot {
+  id              String              @id @default(cuid())
+  costingId       String
+  costing         ExportCosting       @relation(fields: [costingId], references: [id], onDelete: Cascade)
+  kind            CostingSnapshotKind
+  formulaVersion  String
+  inputs          Json
+  results         Json
+  createdByUserId String?
+  createdAt       DateTime            @default(now())
+
+  @@index([costingId])
+  @@map("costing_snapshots")
 }
