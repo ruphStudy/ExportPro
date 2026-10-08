@@ -30,6 +30,11 @@ export const AI_ACTION_NAMES = [
   "compare_supplier_quotes",
   "procurement_status",
   "supplier_payments_due",
+  "sample_status",
+  "samples_awaiting_feedback",
+  "rejected_samples",
+  "buyer_sample_history",
+  "negotiation_summary",
 ] as const;
 export type AiActionName = (typeof AI_ACTION_NAMES)[number];
 export type AiActionKind = "READ" | "WRITE";
@@ -155,11 +160,20 @@ export const ACTION_TRIGGERS = [
   "SUPPLIER_QUOTE_OVERDUE",
   "QUALITY_HOLD",
   "SUPPLIER_PAYMENT_DUE",
+  "SAMPLE_PREPARATION_OVERDUE",
+  "SAMPLE_DELIVERY_OVERDUE",
+  "SAMPLE_FEEDBACK_PENDING",
+  "SAMPLE_REJECTED_FOLLOW_UP",
+  "NEGOTIATION_COUNTER_PENDING",
+  "NEGOTIATION_APPROVAL_REQUIRED",
+  "NEGOTIATION_INACTIVE",
+  "NEGOTIATION_MARGIN_LOW",
+  "DEAL_ROOM_EXPIRING",
 ] as const;
 export type ActionTrigger = (typeof ACTION_TRIGGERS)[number];
 export type ActionItemState = "OPEN" | "IN_PROGRESS" | "SNOOZED" | "COMPLETED" | "DISMISSED" | "EXPIRED";
 export type ActionPriority = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
-export type ActionModule = "CRM" | "OUTREACH" | "FINANCE" | "LOGISTICS" | "COMPLIANCE" | "DOCUMENTS" | "COMMERCIAL" | "OPPORTUNITIES" | "INQUIRIES" | "PROCUREMENT";
+export type ActionModule = "CRM" | "OUTREACH" | "FINANCE" | "LOGISTICS" | "COMPLIANCE" | "DOCUMENTS" | "COMMERCIAL" | "OPPORTUNITIES" | "INQUIRIES" | "PROCUREMENT" | "SAMPLES" | "NEGOTIATIONS" | "DEAL_ROOMS";
 
 export interface ActionItemView {
   id: string;

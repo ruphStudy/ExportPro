@@ -165,7 +165,9 @@ export class CommercialCoreService {
       | 'RCV'
       | 'SRFQ'
       | 'SPO'
-      | 'GRN',
+      | 'GRN'
+      | 'SMP'
+      | 'NEG',
     prefix: string,
     yearlyReset: boolean,
     now = new Date(),
@@ -303,7 +305,10 @@ export class CommercialCoreService {
         | 'SHIPMENT'
         | 'FREIGHT'
         | 'RECEIVABLE'
-        | 'PROFITABILITY';
+        | 'PROFITABILITY'
+        | 'SAMPLE'
+        | 'NEGOTIATION'
+        | 'DEAL_ROOM';
       entityId: string;
       lineageId: string;
       type: string;

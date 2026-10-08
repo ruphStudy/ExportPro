@@ -4828,3 +4828,317 @@ model SupplierPayment {
   @@unique([payableId, referenceKey])
   @@map("supplier_payments")
 }
+
+// --- Sprint 22: samples, negotiation workspace & secure deal rooms --------
+
+/// Physical buyer sample. Each rework is a new iteration row (same sampleNumber, iteration+1);
+/// earlier iterations are never overwritten. Courier fields are manual/provider-fed only.
+model Sample {
+  id                   String    @id @default(cuid())
+  organizationId       String
+  sampleNumber         String
+  iteration            Int       @default(1)
+  rootId               String?
+  previousSampleId     String?
+  source               String
+  buyerCompanyId       String?
+  buyerName            String?
+  inquiryId            String?
+  sampleRequestId      String?
+  crmLeadId            String?
+  quotationId          String?
+  buyerPurchaseOrderId String?
+  productId            String?
+  productName          String
+  specification        String?
+  quantity             Decimal?  @db.Decimal(20, 4)
+  unit                 String?
+  packaging            String?
+  requestedAt          DateTime  @default(now())
+  requestedByUserId    String
+  requiredBy           DateTime?
+  notes                String?
+  status               String    @default("REQUESTED")
+  ownerUserId          String?
+  preparationDueAt     DateTime?
+  preparationStartedAt DateTime?
+  preparedAt           DateTime?
+  packagingNotes       String?
+  internalComments     String?
+  courierProvider      String?
+  bookingReference     String?
+  trackingNumber       String?
+  trackingUrl          String?
+  shippedAt            DateTime?
+  expectedDeliveryAt   DateTime?
+  courierCost          Decimal?  @db.Decimal(20, 2)
+  courierCurrency      String?
+  deliveredAt          DateTime?
+  deliveryRecipient    String?
+  deliverySource       String?
+  deliveryNotes        String?
+  decision             String?
+  decisionReason       String?
+  decisionNote         String?
+  decidedByUserId      String?
+  decidedAt            DateTime?
+  rowVersion           Int       @default(0)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  events      SampleEvent[]
+  costs       SampleCost[]
+  feedback    SampleFeedback[]
+  attachments SampleAttachment[]
+
+  @@unique([organizationId, sampleNumber, iteration])
+  @@index([organizationId, status])
+  @@index([organizationId, buyerCompanyId])
+  @@index([rootId])
+  @@map("samples")
+}
+
+/// Sample state history + manual courier updates (idempotent per key).
+model SampleEvent {
+  id              String   @id @default(cuid())
+  organizationId  String
+  sampleId        String
+  sample          Sample   @relation(fields: [sampleId], references: [id], onDelete: Cascade)
+  type            String
+  fromStatus      String?
+  toStatus        String?
+  source          String?
+  note            String?
+  occurredAt      DateTime @default(now())
+  idempotencyKey  String?
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+
+  @@unique([sampleId, idempotencyKey])
+  @@index([sampleId, occurredAt])
+  @@map("sample_events")
+}
+
+/// Pre-sales sample cost — kept out of shipment profitability.
+model SampleCost {
+  id                String    @id @default(cuid())
+  organizationId    String
+  sampleId          String
+  sample            Sample    @relation(fields: [sampleId], references: [id], onDelete: Cascade)
+  category          String
+  description       String?
+  amount            Decimal   @db.Decimal(20, 2)
+  currency          String
+  reportingCurrency String
+  convertedAmount   Decimal?  @db.Decimal(20, 2)
+  fxRate            Decimal?  @db.Decimal(20, 10)
+  fxSourceLabel     String?
+  incurredAt        DateTime?
+  voidedAt          DateTime?
+  voidReason        String?
+  createdByUserId   String
+  createdAt         DateTime  @default(now())
+
+  @@index([sampleId])
+  @@map("sample_costs")
+}
+
+model SampleFeedback {
+  id               String   @id @default(cuid())
+  organizationId   String
+  sampleId         String
+  sample           Sample   @relation(fields: [sampleId], references: [id], onDelete: Cascade)
+  receivedAt       DateTime
+  source           String
+  rating           Int?
+  verdict          String
+  comments         String?
+  qualityNotes     String?
+  packagingNotes   String?
+  priceFeedback    String?
+  requestedChanges String?
+  idempotencyKey   String?
+  recordedByUserId String
+  createdAt        DateTime @default(now())
+
+  @@unique([sampleId, idempotencyKey])
+  @@index([sampleId])
+  @@map("sample_feedback")
+}
+
+model SampleAttachment {
+  id               String   @id @default(cuid())
+  organizationId   String
+  sampleId         String
+  sample           Sample   @relation(fields: [sampleId], references: [id], onDelete: Cascade)
+  feedbackId       String?
+  category         String
+  filename         String
+  storageKey       String
+  mimeType         String
+  sizeBytes        Int
+  checksum         String
+  uploadedByUserId String
+  createdAt        DateTime @default(now())
+
+  @@index([sampleId])
+  @@map("sample_attachments")
+}
+
+model Negotiation {
+  id                   String    @id @default(cuid())
+  organizationId       String
+  negotiationNumber    String
+  source               String
+  status               String    @default("OPEN")
+  buyerCompanyId       String
+  buyerName            String?
+  inquiryId            String?
+  quotationId          String?
+  sampleId             String?
+  crmLeadId            String?
+  buyerPurchaseOrderId String?
+  costingId            String?
+  costingScenarioId    String?
+  productId            String?
+  productName          String?
+  targetMarginPercent  Decimal?  @db.Decimal(9, 4)
+  ownerUserId          String
+  openedAt             DateTime  @default(now())
+  closedAt             DateTime?
+  outcome              String?
+  outcomeReason        String?
+  outcomeNote          String?
+  outcomeByUserId      String?
+  outcomeAt            DateTime?
+  agreedRoundId        String?
+  handoffQuotationId   String?
+  approvalRequired     Boolean   @default(false)
+  approvedByUserId     String?
+  approvedAt           DateTime?
+  lastActivityAt       DateTime  @default(now())
+  rowVersion           Int       @default(0)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  rounds NegotiationRound[]
+
+  @@unique([organizationId, negotiationNumber])
+  @@index([organizationId, status])
+  @@index([organizationId, buyerCompanyId])
+  @@map("negotiations")
+}
+
+/// Immutable commercial snapshot. A new proposal is always a new round.
+model NegotiationRound {
+  id              String      @id @default(cuid())
+  organizationId  String
+  negotiationId   String
+  negotiation     Negotiation @relation(fields: [negotiationId], references: [id], onDelete: Cascade)
+  sequence        Int
+  side            String
+  source          String
+  notes           String?
+  snapshot        Json
+  idempotencyKey  String?
+  createdByUserId String
+  createdAt       DateTime    @default(now())
+
+  @@unique([negotiationId, sequence])
+  @@unique([negotiationId, idempotencyKey])
+  @@map("negotiation_rounds")
+}
+
+/// Buyer-facing secure document room. Only the SHA-256 of the access token is stored.
+model DealRoom {
+  id                   String    @id @default(cuid())
+  organizationId       String
+  name                 String
+  buyerCompanyId       String?
+  buyerName            String?
+  inquiryId            String?
+  quotationId          String?
+  proformaInvoiceId    String?
+  buyerPurchaseOrderId String?
+  shipmentId           String?
+  negotiationId        String?
+  tokenHash            String    @unique
+  tokenHint            String
+  tokenVersion         Int       @default(1)
+  expiresAt            DateTime
+  revokedAt            DateTime?
+  revokedByUserId      String?
+  revokeReason         String?
+  allowedEmail         String?
+  accessCodeHash       String?
+  allowComments        Boolean   @default(false)
+  lastAccessAt         DateTime?
+  createdByUserId      String
+  rowVersion           Int       @default(0)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  shares   DealRoomShare[]
+  logs     DealRoomAccessLog[]
+  comments DealRoomComment[]
+
+  @@index([organizationId, createdAt])
+  @@map("deal_rooms")
+}
+
+/// Reference to the exact document version shared (no file copy). Replacing creates a new share row.
+model DealRoomShare {
+  id                String    @id @default(cuid())
+  organizationId    String
+  dealRoomId        String
+  dealRoom          DealRoom  @relation(fields: [dealRoomId], references: [id], onDelete: Cascade)
+  docType           String
+  sourceId          String
+  rootId            String?
+  versionLabel      String
+  title             String
+  filename          String
+  mimeType          String?
+  permission        String    @default("VIEW")
+  sharedByUserId    String
+  addedAt           DateTime  @default(now())
+  removedAt         DateTime?
+  removedByUserId   String?
+  replacedByShareId String?
+  replacesShareId   String?
+
+  @@index([dealRoomId])
+  @@map("deal_room_shares")
+}
+
+model DealRoomAccessLog {
+  id             String   @id @default(cuid())
+  organizationId String
+  dealRoomId     String
+  dealRoom       DealRoom @relation(fields: [dealRoomId], references: [id], onDelete: Cascade)
+  shareId        String?
+  event          String
+  tokenVersion   Int
+  sessionRef     String?
+  guestEmail     String?
+  at             DateTime @default(now())
+
+  @@index([dealRoomId, at])
+  @@map("deal_room_access_logs")
+}
+
+model DealRoomComment {
+  id             String    @id @default(cuid())
+  organizationId String
+  dealRoomId     String
+  dealRoom       DealRoom  @relation(fields: [dealRoomId], references: [id], onDelete: Cascade)
+  shareId        String?
+  guestName      String
+  guestEmail     String?
+  body           String
+  hiddenAt       DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([dealRoomId])
+  @@map("deal_room_comments")
+}

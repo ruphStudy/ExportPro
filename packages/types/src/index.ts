@@ -25,3 +25,4 @@ export * from "./logistics";
 export * from "./finance";
 export * from "./ai-ops";
 export * from "./procurement";
+export * from "./commercial-execution";
