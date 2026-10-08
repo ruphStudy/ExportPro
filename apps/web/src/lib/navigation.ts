@@ -1,4 +1,6 @@
 import {
+  Bot,
+  ListChecks,
   Wallet,
   BarChart3,
   Calculator,
@@ -48,6 +50,23 @@ export const NAV_ITEMS: NavItem[] = [
     status: "active",
     description: "Foundation overview of your workspace.",
   },
+  {
+    label: "AI Export Manager",
+    href: "/ai-manager",
+    icon: Bot,
+    status: "active",
+    permission: "ai_manager.use",
+    description: "Ask questions and run confirmed actions across your export modules.",
+  },
+  {
+    label: "Action Center",
+    href: "/action-center",
+    icon: ListChecks,
+    status: "active",
+    permission: "action_center.view",
+    description: "Prioritized items that need your attention, and automation rules.",
+  },
+
   {
     label: "Export Setup",
     href: "/export-setup",
@@ -171,8 +190,9 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Analytics",
     href: "/analytics",
     icon: BarChart3,
-    status: "placeholder",
-    description: "Profitability and trade analytics.",
+    status: "active",
+    permission: "analytics.view",
+    description: "Executive dashboards across revenue, pipeline, shipments, payments and profitability.",
   },
   {
     label: "Team",
@@ -223,7 +243,7 @@ export const NAV_ITEMS: NavItem[] = [
 ];
 
 /** Routes without their own sidebar item, shown under the closest parent section. */
-const SECTION_ALIASES: Record<string, string> = { "/compare": "/recommendations", "/proforma-invoices": "/quotations", "/purchase-orders": "/quotations", "/documents": "/compliance", "/freight-quotes": "/shipments", "/profitability": "/finance", "/repeat-business": "/finance" };
+const SECTION_ALIASES: Record<string, string> = { "/compare": "/recommendations", "/proforma-invoices": "/quotations", "/purchase-orders": "/quotations", "/documents": "/compliance", "/freight-quotes": "/shipments", "/profitability": "/finance", "/repeat-business": "/finance", "/automation": "/action-center" };
 
 export function findNavItemByPath(pathname: string): NavItem | undefined {
   const alias = Object.entries(SECTION_ALIASES).find(([prefix]) => pathname === prefix || pathname.startsWith(`${prefix}/`));

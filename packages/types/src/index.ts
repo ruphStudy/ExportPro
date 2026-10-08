@@ -23,3 +23,4 @@ export * from "./compliance";
 export * from "./document-validation";
 export * from "./logistics";
 export * from "./finance";
+export * from "./ai-ops";

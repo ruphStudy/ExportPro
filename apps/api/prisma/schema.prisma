@@ -530,6 +530,11 @@ model Organization {
   shipmentActualCosts   ShipmentActualCost[]
   shipmentProfitability ShipmentProfitability[]
   reorderReminders      ReorderReminder[]
+  opsSettings           OpsSettings?
+  aiConversations       AiConversation[]
+  aiActionExecutions    AiActionExecution[]
+  actionItems           ActionItem[]
+  automationRules       AutomationRule[]
 
   @@map("organizations")
 }
@@ -4199,4 +4204,165 @@ model ReorderReminder {
 
   @@unique([organizationId, buyerCompanyId, windowStart])
   @@map("reorder_reminders")
+}
+
+// --- Sprint 20: AI Export Manager, Action Center, automation -------------
+// Orchestration only: no business logic lives here; analytics are query-time.
+
+model OpsSettings {
+  id              String       @id @default(cuid())
+  organizationId  String       @unique
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  noReplyDays     Int          @default(5)
+  lastEvaluatedAt DateTime?    @db.Timestamptz(3)
+  /// Evaluation lease — one evaluation per organization at a time.
+  evaluatingUntil DateTime?    @db.Timestamptz(3)
+  templatesSeeded Boolean      @default(false)
+  updatedAt       DateTime     @updatedAt @db.Timestamptz(3)
+
+  @@map("ops_settings")
+}
+
+/// Session-level context only (no long-term memory).
+model AiConversation {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  context        Json         @default("{}")
+  createdAt      DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime     @updatedAt @db.Timestamptz(3)
+
+  messages AiMessage[]
+
+  @@index([organizationId, userId, updatedAt])
+  @@map("ai_conversations")
+}
+
+/// Minimal transcript (truncated text); never written to the audit log.
+model AiMessage {
+  id             String         @id @default(cuid())
+  organizationId String
+  conversationId String
+  conversation   AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String
+  text           String
+  intent         Json?
+  createdAt      DateTime       @default(now()) @db.Timestamptz(3)
+
+  @@index([conversationId, createdAt])
+  @@map("ai_messages")
+}
+
+model AiActionExecution {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  conversationId String?
+  action         String
+  kind           String
+  label          String
+  target         String
+  params         Json
+  preview        Json
+  status         String       @default("PROPOSED")
+  idempotencyKey String
+  result         Json?
+  error          String?
+  createdAt      DateTime     @default(now()) @db.Timestamptz(3)
+  confirmedAt    DateTime?    @db.Timestamptz(3)
+  executedAt     DateTime?    @db.Timestamptz(3)
+
+  @@unique([organizationId, idempotencyKey])
+  @@index([organizationId, userId, createdAt])
+  @@map("ai_action_executions")
+}
+
+model ActionItem {
+  id                 String       @id @default(cuid())
+  organizationId     String
+  organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  type               String
+  severity           String
+  priority           String
+  priorityScore      Int
+  priorityReasons    String[]
+  title              String
+  description        String
+  sourceModule       String
+  sourceEntityType   String
+  sourceEntityId     String
+  context            Json
+  links              Json
+  suggestedAction    String?
+  requiredPermission String
+  dueAt              DateTime?    @db.Timestamptz(3)
+  state              String       @default("OPEN")
+  snoozedUntil       DateTime?    @db.Timestamptz(3)
+  assignedToUserId   String?
+  generatedBy        String       @default("AUTOMATION")
+  ruleId             String?
+  /// Deterministic key of the source condition (one item per condition).
+  dedupeKey          String
+  sourceEventId      String?
+  lastSeenAt         DateTime     @default(now()) @db.Timestamptz(3)
+  resolvedAt         DateTime?    @db.Timestamptz(3)
+  resolvedByUserId   String?
+  resolutionReason   String?
+  autoResolved       Boolean      @default(false)
+  rowVersion         Int          @default(0)
+  createdAt          DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime     @updatedAt @db.Timestamptz(3)
+
+  @@unique([organizationId, dedupeKey])
+  @@index([organizationId, state, priorityScore])
+  @@map("action_items")
+}
+
+model AutomationRule {
+  id               String       @id @default(cuid())
+  organizationId   String
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name             String
+  triggerType      String
+  enabled          Boolean      @default(true)
+  conditions       Json         @default("{}")
+  actionType       String
+  actionConfig     Json         @default("{}")
+  requiresApproval Boolean      @default(false)
+  template         String?
+  lastRunAt        DateTime?    @db.Timestamptz(3)
+  lastResult       String?
+  rowVersion       Int          @default(0)
+  createdByUserId  String?
+  createdAt        DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime     @updatedAt @db.Timestamptz(3)
+
+  runs AutomationRun[]
+
+  @@index([organizationId, triggerType])
+  @@map("automation_rules")
+}
+
+/// One run per rule × source condition (dedupeKey) — the recursion/duplicate guard.
+model AutomationRun {
+  id             String         @id @default(cuid())
+  organizationId String
+  ruleId         String
+  rule           AutomationRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  triggerType    String
+  sourceKey      String
+  dedupeKey      String
+  status         String
+  condition      String
+  result         String?
+  skippedReason  String?
+  error          String?
+  actionItemId   String?
+  createdAt      DateTime       @default(now()) @db.Timestamptz(3)
+
+  @@unique([organizationId, dedupeKey])
+  @@index([organizationId, createdAt])
+  @@map("automation_runs")
 }

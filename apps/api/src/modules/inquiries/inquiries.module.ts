@@ -25,6 +25,6 @@ import { InquiryIntakeService } from './inquiry-intake.service';
         ),
     },
   ],
-  exports: [InquiryIntakeService],
+  exports: [InquiryIntakeService, InquiriesService],
 })
 export class InquiriesModule {}

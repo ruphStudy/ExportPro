@@ -25,5 +25,6 @@ import { SavedSearchesService } from './saved-searches.service';
     WatchlistService,
     SavedSearchesService,
   ],
+  exports: [OpportunitiesService],
 })
 export class OpportunitiesModule {}

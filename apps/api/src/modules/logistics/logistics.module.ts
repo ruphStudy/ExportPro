@@ -40,5 +40,6 @@ import {
       useClass: UnconfiguredTrackingProvider,
     },
   ],
+  exports: [ShipmentsService],
 })
 export class LogisticsModule {}

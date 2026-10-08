@@ -45,5 +45,6 @@ import { createOutreachProvider } from './providers/provider.factory';
         ),
     },
   ],
+  exports: [OutreachService],
 })
 export class OutreachModule {}

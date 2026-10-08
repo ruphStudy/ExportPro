@@ -26,6 +26,6 @@ import { QuotationsService } from './quotations.service';
     ProformaInvoicesService,
     PurchaseOrdersService,
   ],
-  exports: [CommercialCoreService],
+  exports: [CommercialCoreService, QuotationsService],
 })
 export class CommercialModule {}

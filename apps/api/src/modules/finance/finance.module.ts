@@ -17,5 +17,11 @@ import { ReceivablesService } from './receivables.service';
     ProfitabilityService,
     AnalyticsService,
   ],
+  exports: [
+    FinanceCoreService,
+    ReceivablesService,
+    ProfitabilityService,
+    AnalyticsService,
+  ],
 })
 export class FinanceModule {}

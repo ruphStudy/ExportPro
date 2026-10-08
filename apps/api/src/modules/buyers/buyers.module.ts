@@ -43,5 +43,6 @@ import {
         ),
     },
   ],
+  exports: [BuyersService],
 })
 export class BuyersModule {}
