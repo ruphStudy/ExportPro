@@ -1,8 +1,6 @@
-import { PlaceholderPage } from "@/components/layout/placeholder-page";
-import { NAV_ITEMS } from "@/lib/navigation";
+import { redirect } from "next/navigation";
 
-const item = NAV_ITEMS.find((navItem) => navItem.href === "/suppliers")!;
-
+/** Sprint 21: supplier management lives under Procurement. */
 export default function Page() {
-  return <PlaceholderPage title={item.label} description={item.description} icon={item.icon} />;
+  redirect("/procurement/suppliers");
 }

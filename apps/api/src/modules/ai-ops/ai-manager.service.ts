@@ -35,6 +35,9 @@ import { InquiriesService } from '../inquiries/inquiries.service';
 import { ShipmentsService } from '../logistics/shipments.service';
 import { OpportunitiesService } from '../opportunities/opportunities.service';
 import { ProductsService } from '../products/products.service';
+import { SupplierPoService } from '../procurement/supplier-po.service';
+import { SupplierRfqsService } from '../procurement/supplier-rfqs.service';
+import { SuppliersService } from '../procurement/suppliers.service';
 import { ActionCenterService } from './action-center.service';
 import { AI_ACTIONS, MODULE_LINKS, QUICK_COMMANDS } from './action-registry';
 import {
@@ -98,6 +101,9 @@ export class AiManagerService {
     private readonly receivables: ReceivablesService,
     private readonly financeAnalytics: FinanceAnalyticsService,
     private readonly actions: ActionCenterService,
+    private readonly suppliersSvc: SuppliersService,
+    private readonly supplierRfqs: SupplierRfqsService,
+    private readonly supplierPos: SupplierPoService,
     private readonly automation: AutomationService,
     private readonly analytics: ExecutiveAnalyticsService,
     private readonly audit: AuditService,
@@ -406,6 +412,14 @@ export class AiManagerService {
         return this.attention(a, null, 'Needs your attention:');
       case 'analytics_summary':
         return this.summary(a);
+      case 'find_suppliers':
+        return this.findSuppliers(a, e.product ?? ctx.product);
+      case 'compare_supplier_quotes':
+        return this.compareQuotes(a, e.reference ?? null);
+      case 'procurement_status':
+        return this.procurementStatus(a, e.reference ?? null);
+      case 'supplier_payments_due':
+        return this.supplierPaymentsDue(a);
     }
   }
 
@@ -962,6 +976,186 @@ export class AiManagerService {
           }
         : null,
       links: [{ label: 'Exceptions', href: '/shipments/exceptions' }],
+    };
+  }
+
+  // ---------------------------------------------------------------- Sprint 21 procurement (read-only)
+
+  private procProvenance(source: string) {
+    return [
+      {
+        module: 'Procurement',
+        source,
+        freshness: null,
+        asOf: new Date().toISOString(),
+        confidence: null,
+      },
+    ];
+  }
+
+  private async findSuppliers(
+    a: Actor,
+    product: string | null | undefined,
+  ): Promise<Part> {
+    const r = await this.suppliersSvc.search(a, {
+      product: product ?? undefined,
+      pageSize: 10,
+    } as never);
+    const ext = r.sources.filter((x) => x.status !== 'OK').map((x) => x.name);
+    return {
+      text: r.items.length
+        ? `${r.meta.totalItems} supplier(s) in your supplier master${product ? ` for ${product}` : ''}. Source and verification are shown — none are invented.`
+        : `No suppliers${product ? ` for ${product}` : ''} in your supplier master yet. ${ext.length ? `${ext.join(', ')} not configured, so no external suppliers were searched.` : ''} Add suppliers you work with.`,
+      table: r.items.length
+        ? {
+            columns: ['Supplier', 'Location', 'Source', 'Verification', 'Fit'],
+            rows: r.items.map((x) => [
+              x.legalName,
+              [x.city, x.state].filter(Boolean).join(', ') || '—',
+              x.provenance.sourceLabel ?? x.provenance.source,
+              x.provenance.verification.replace(/_/g, ' ').toLowerCase(),
+              x.fit
+                ? `${x.fit.score} (confidence ${x.fit.confidencePercent}%)`
+                : '—',
+            ]),
+          }
+        : null,
+      links: [
+        {
+          label: 'Supplier discovery',
+          href: `/procurement/suppliers${product ? `?product=${encodeURIComponent(product)}` : ''}`,
+        },
+      ],
+      provenance: this.procProvenance(
+        'Supplier master (user-added / imported records)',
+      ),
+      ctx: product ? { product } : {},
+    };
+  }
+
+  private async compareQuotes(a: Actor, ref: string | null): Promise<Part> {
+    const rfq = ref
+      ? await this.prisma.supplierRfq.findFirst({
+          where: {
+            organizationId: a.organizationId,
+            rfqNumber: ref.toUpperCase(),
+          },
+        })
+      : await this.prisma.supplierRfq.findFirst({
+          where: {
+            organizationId: a.organizationId,
+            status: { in: ['QUOTED', 'PARTIALLY_QUOTED'] },
+          },
+          orderBy: { updatedAt: 'desc' },
+        });
+    if (!rfq)
+      return {
+        text: ref
+          ? `Supplier RFQ ${ref} was not found.`
+          : 'No supplier RFQ with quotes to compare yet.',
+        links: [{ label: 'Supplier RFQs', href: '/procurement/rfqs' }],
+      };
+    const c = await this.supplierRfqs.compare(a, rfq.id, {});
+    return {
+      text: c.rows.length
+        ? `${rfq.rfqNumber} — ${c.rows.length} reviewed quote(s) compared in ${c.targetCurrency}. ${c.recommendation.statements.join(' ')} This is advisory; selecting a supplier is your decision.`
+        : `${rfq.rfqNumber} has no reviewed quotes yet (quotes must be confirmed before comparison).`,
+      table: c.rows.length
+        ? {
+            columns: [
+              'Supplier',
+              `Landed/unit (${c.targetCurrency})`,
+              'Lead time',
+              'Certifications',
+              'Unknown',
+            ],
+            rows: c.rows.map((x) => [
+              x.quote.supplier.legalName,
+              x.landedUnitCost ?? '—',
+              x.quote.leadTimeDays !== null ? `${x.quote.leadTimeDays} d` : '—',
+              x.certification.missing.length
+                ? `missing ${x.certification.missing.join(', ')}`
+                : 'ok',
+              x.unknownCharges.join(', ') || '—',
+            ]),
+          }
+        : null,
+      links: [
+        { label: `Open ${rfq.rfqNumber}`, href: `/procurement/rfqs/${rfq.id}` },
+      ],
+      provenance: this.procProvenance(
+        'Reviewed supplier quotes (FX snapshot normalized)',
+      ),
+    };
+  }
+
+  private async procurementStatus(a: Actor, ref: string | null): Promise<Part> {
+    if (ref) {
+      const p = await this.prisma.supplierPurchaseOrder.findFirst({
+        where: {
+          organizationId: a.organizationId,
+          spoNumber: ref.toUpperCase(),
+        },
+      });
+      if (!p) return { text: `Supplier PO ${ref} was not found.` };
+      const d = await this.supplierPos.detail(a, p.id);
+      return {
+        text: `${d.spoNumber} (${d.supplier.legalName}) is ${d.status.replace(/_/g, ' ').toLowerCase()} — procurement ${d.procurementStatus.replace(/_/g, ' ').toLowerCase()}, ${d.receivedPercent}% received, quality ${d.qualityState.toLowerCase()}${d.overdue ? ', past expected delivery' : ''}.${d.completion.blockers.length && d.status === 'RECEIVED' ? ` Blocking completion: ${d.completion.blockers.join(' ')}` : ''}`,
+        links: [
+          { label: `Open ${d.spoNumber}`, href: `/procurement/orders/${d.id}` },
+        ],
+        provenance: this.procProvenance(
+          'Supplier PO, goods receipts and inspections',
+        ),
+      };
+    }
+    const o = await this.supplierPos.overview(a);
+    return {
+      text: `Procurement: ${o.openSupplierPos} open supplier PO(s), ${o.delayed} delayed, ${o.awaitingInspection} receipt(s) awaiting inspection, ${o.qualityHolds} on hold/failed, ${o.openRfqs} open supplier RFQ(s).`,
+      table: o.actions.length
+        ? {
+            columns: ['Needs attention'],
+            rows: o.actions.map((x) => [x.title]),
+          }
+        : null,
+      links: [
+        { label: 'Procurement', href: '/procurement' },
+        ...o.actions.slice(0, 3).map((x) => ({ label: x.title, href: x.href })),
+      ],
+      provenance: this.procProvenance(
+        'Supplier POs, goods receipts and inspections',
+      ),
+    };
+  }
+
+  private async supplierPaymentsDue(a: Actor): Promise<Part> {
+    const list = await this.supplierPos.dueInstallments(a);
+    return {
+      text: list.length
+        ? `${list.length} supplier installment(s) due within 7 days or overdue:`
+        : 'No supplier payments due in the next 7 days.',
+      table: list.length
+        ? {
+            columns: [
+              'Supplier',
+              'Supplier PO',
+              'Installment',
+              'Outstanding',
+              'Due',
+            ],
+            rows: list.map(({ payable: x, installment: i }) => [
+              x.supplier.legalName,
+              x.supplierPo.spoNumber,
+              i.label,
+              `${x.currency} ${i.outstanding}`,
+              i.dueDate ?? '—',
+            ]),
+          }
+        : null,
+      links: [{ label: 'Supplier payables', href: '/procurement/payables' }],
+      provenance: this.procProvenance(
+        'Supplier payables (read-time due status)',
+      ),
     };
   }
 

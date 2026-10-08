@@ -33,6 +33,7 @@ import { FinanceModule } from './modules/finance/finance.module';
 import { AiOpsModule } from './modules/ai-ops/ai-ops.module';
 import { CrmModule } from './modules/crm/crm.module';
 import { OutreachModule } from './modules/outreach/outreach.module';
+import { ProcurementModule } from './modules/procurement/procurement.module';
 import { DevModule } from './modules/dev/dev.module';
 
 /**
@@ -75,6 +76,7 @@ import { DevModule } from './modules/dev/dev.module';
     AiOpsModule,
     CrmModule,
     OutreachModule,
+    ProcurementModule,
     // Dev-only mailbox for reading OTP/reset emails without a real mail provider.
     ...(process.env.NODE_ENV === 'production' ? [] : [DevModule]),
   ],

@@ -154,7 +154,18 @@ export class CommercialCoreService {
   async nextNumber(
     tx: Tx,
     organizationId: string,
-    docType: 'QUOTATION' | 'PI' | 'CI' | 'PL' | 'SI' | 'SHP' | 'FR' | 'RCV',
+    docType:
+      | 'QUOTATION'
+      | 'PI'
+      | 'CI'
+      | 'PL'
+      | 'SI'
+      | 'SHP'
+      | 'FR'
+      | 'RCV'
+      | 'SRFQ'
+      | 'SPO'
+      | 'GRN',
     prefix: string,
     yearlyReset: boolean,
     now = new Date(),

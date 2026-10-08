@@ -24,6 +24,7 @@ import { Select } from "@/components/ui/select";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { Caption, HelperText, PageTitle, SectionTitle } from "@/components/ui/typography";
+import { FindSuppliersButton } from "@/components/procurement/shared";
 
 export default function InquiryDetailPage() {
   return (
@@ -89,6 +90,7 @@ function Header({ d }: { d: BuyerInquiryDetail }) {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
+          {d.confirmed?.items[0] && <FindSuppliersButton product={d.confirmed.items[0].productName} productId={d.confirmed.items[0].productId} />}
           <Button variant="outline" size="sm" onClick={() => read.mutate(d.unread)} aria-pressed={!d.unread}>{d.unread ? <MailOpen className="size-4" aria-hidden="true" /> : <Mail className="size-4" aria-hidden="true" />}{d.unread ? "Mark read" : "Mark unread"}</Button>
           {(can("archive") || can("restore")) && <Button variant="ghost" size="sm" onClick={() => archive.mutate(undefined)}>{d.status === "ARCHIVED" ? <RotateCcw className="size-4" aria-hidden="true" /> : <Archive className="size-4" aria-hidden="true" />}{d.status === "ARCHIVED" ? "Restore" : "Archive"}</Button>}
         </div>

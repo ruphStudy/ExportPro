@@ -23,6 +23,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ErrorState } from "@/components/ui/error-state";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { Caption, HelperText, PageTitle, SectionTitle } from "@/components/ui/typography";
+import { FindSuppliersButton } from "@/components/procurement/shared";
 
 function categoryLabel(code: string): string {
   return PRODUCT_CATEGORIES.find((c) => c.code === code)?.label ?? code;
@@ -115,6 +116,7 @@ function OpportunityDetailContent() {
               <span className="flex items-center text-xs text-muted-foreground" role="note">Find buyers: analyze and save this product first so buyers can be matched by HS code.</span>
             )
           )}
+          <FindSuppliersButton product={o.productName} productId={savedProduct.data?.id} opportunityId={o.id} size="md" />
           {canAnalyzeProduct && !savedProduct.data && (
             // Only prefills the analysis form — nothing is classified, saved or changed on the opportunity.
             <Button asChild variant="outline">

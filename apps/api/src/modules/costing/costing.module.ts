@@ -7,5 +7,6 @@ import { CostingService } from './costing.service';
   imports: [AuditModule],
   controllers: [CostingController, FxController],
   providers: [CostingService],
+  exports: [CostingService],
 })
 export class CostingModule {}

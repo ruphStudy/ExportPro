@@ -9,6 +9,7 @@ import { AnalyticsService as FinanceAnalyticsService } from '../finance/analytic
 import { FinanceCoreService } from '../finance/finance-core.service';
 import { ReceivablesService } from '../finance/receivables.service';
 import { ShipmentsService } from '../logistics/shipments.service';
+import { SupplierPoService } from '../procurement/supplier-po.service';
 import { isoDay, type PriorityFactors, type SignalMetrics } from './ops-rules';
 
 const DAY = 86400000;
@@ -54,6 +55,7 @@ export class SignalsService {
     private readonly crm: CrmService,
     private readonly validation: DocumentValidationService,
     private readonly compliance: ComplianceService,
+    private readonly procurement: SupplierPoService,
   ) {}
 
   /** Returns signals plus the triggers that were read successfully (only those may auto-resolve items). */
@@ -90,6 +92,14 @@ export class SignalsService {
     await run(['NEW_OPPORTUNITY'], () => this.opportunities(a.organizationId));
     await run(['CRM_TASK_OVERDUE'], () => this.crmFollowUps(sys));
     await run(['SAMPLE_DELIVERED'], () => this.samples(a.organizationId));
+    await run(['SUPPLIER_DELIVERY_OVERDUE'], () =>
+      this.supplierDelivery(a.organizationId),
+    );
+    await run(['SUPPLIER_QUOTE_OVERDUE'], () =>
+      this.supplierQuotes(a.organizationId),
+    );
+    await run(['QUALITY_HOLD'], () => this.qualityHolds(a.organizationId));
+    await run(['SUPPLIER_PAYMENT_DUE'], () => this.supplierPayments(sys, rate));
     return { signals: out, ok };
   }
 
@@ -689,5 +699,221 @@ export class SignalsService {
       onDisappear: 'COMPLETED' as const,
       refs: { buyerId: s.buyerCompanyId },
     }));
+  }
+
+  // ---------------------------------------------------------------- Sprint 21 procurement (read from procurement truth)
+
+  private async supplierNames(org: string, ids: string[]) {
+    const rows = await this.prisma.supplier.findMany({
+      where: { organizationId: org, id: { in: [...new Set(ids)] } },
+      select: { id: true, legalName: true },
+    });
+    return new Map(rows.map((r) => [r.id, r.legalName]));
+  }
+
+  private async supplierDelivery(org: string): Promise<Signal[]> {
+    const today = new Date(new Date().toISOString().slice(0, 10));
+    const rows = await this.prisma.supplierPurchaseOrder.findMany({
+      where: {
+        organizationId: org,
+        status: {
+          in: [
+            'ISSUED',
+            'ACKNOWLEDGED',
+            'IN_PRODUCTION',
+            'READY',
+            'PARTIALLY_RECEIVED',
+          ],
+        },
+        expectedDate: { lt: today },
+      },
+      include: { items: { select: { productName: true } } },
+    });
+    const sup = await this.supplierNames(
+      org,
+      rows.map((r) => r.supplierId),
+    );
+    return rows.map((p) => {
+      const days = Math.floor(
+        (today.getTime() - p.expectedDate!.getTime()) / DAY,
+      );
+      const sev = days > 7 ? ('CRITICAL' as const) : ('WARNING' as const);
+      return {
+        trigger: 'SUPPLIER_DELIVERY_OVERDUE' as const,
+        dedupeKey: `spo_delivery:${p.id}:${isoDay(p.expectedDate!)}`,
+        sourceEventId: `supplier_po:${p.id}`,
+        module: 'PROCUREMENT' as const,
+        entityType: 'SupplierPurchaseOrder',
+        entityId: p.id,
+        title: `Supplier delivery overdue — ${p.spoNumber} (${days} day(s))`,
+        description: `${sup.get(p.supplierId) ?? 'Supplier'} · ${p.items.map((i) => i.productName).join(', ')} · expected ${isoDay(p.expectedDate!)}.`,
+        severity: sev,
+        dueAt: p.expectedDate,
+        context: [
+          { label: 'Supplier', value: sup.get(p.supplierId) ?? 'Supplier' },
+          { label: 'Status', value: p.status.replace(/_/g, ' ').toLowerCase() },
+        ],
+        links: [
+          { label: 'Open supplier PO', href: `/procurement/orders/${p.id}` },
+        ],
+        suggestedAction:
+          'Call the supplier and record the revised delivery date (with reason).',
+        requiredPermission: 'procurement.view',
+        factors: {
+          severity: sev,
+          delayDays: days,
+          blocker: Boolean(p.buyerPurchaseOrderId),
+        },
+        metrics: { severity: sev, daysOverdue: days },
+        onDisappear: 'COMPLETED' as const,
+        refs: { supplierId: p.supplierId },
+      };
+    });
+  }
+
+  private async supplierQuotes(org: string): Promise<Signal[]> {
+    const today = new Date(new Date().toISOString().slice(0, 10));
+    const rfqs = await this.prisma.supplierRfq.findMany({
+      where: {
+        organizationId: org,
+        status: { in: ['REQUESTED', 'PARTIALLY_QUOTED'] },
+        quoteDueDate: { lt: today },
+      },
+      include: { recipients: { where: { status: 'REQUESTED' } } },
+    });
+    const sup = await this.supplierNames(
+      org,
+      rfqs.flatMap((r) => r.recipients.map((x) => x.supplierId)),
+    );
+    return rfqs.flatMap((r) =>
+      r.recipients.map((x) => {
+        const days = Math.floor(
+          (today.getTime() - r.quoteDueDate!.getTime()) / DAY,
+        );
+        return {
+          trigger: 'SUPPLIER_QUOTE_OVERDUE' as const,
+          dedupeKey: `srfq_quote:${r.id}:${x.supplierId}:${isoDay(r.quoteDueDate!)}`,
+          sourceEventId: `supplier_rfq:${r.id}`,
+          module: 'PROCUREMENT' as const,
+          entityType: 'SupplierRfq',
+          entityId: r.id,
+          title: `Supplier quote overdue — ${sup.get(x.supplierId) ?? 'Supplier'} (${r.rfqNumber})`,
+          description: `${r.productName} · quote was due ${isoDay(r.quoteDueDate!)}.`,
+          severity: 'WARNING' as const,
+          dueAt: r.quoteDueDate,
+          context: [
+            { label: 'Supplier', value: sup.get(x.supplierId) ?? 'Supplier' },
+            { label: 'Product', value: r.productName },
+          ],
+          links: [
+            { label: 'Open supplier RFQ', href: `/procurement/rfqs/${r.id}` },
+          ],
+          suggestedAction: 'Follow up with the supplier or record their quote.',
+          requiredPermission: 'supplier_rfq.view',
+          factors: { severity: 'WARNING' as const, overdueDays: days },
+          metrics: { severity: 'WARNING' as const, daysOverdue: days },
+          onDisappear: 'COMPLETED' as const,
+          refs: { supplierId: x.supplierId },
+        };
+      }),
+    );
+  }
+
+  private async qualityHolds(org: string): Promise<Signal[]> {
+    const rows = await this.prisma.goodsReceipt.findMany({
+      where: { organizationId: org, qualityStatus: { in: ['HOLD', 'FAILED'] } },
+      include: { supplierPo: true },
+    });
+    const sup = await this.supplierNames(
+      org,
+      rows.map((r) => r.supplierPo.supplierId),
+    );
+    return rows.map((g) => ({
+      trigger: 'QUALITY_HOLD' as const,
+      dedupeKey: `quality:${g.id}:${g.qualityStatus}`,
+      sourceEventId: `goods_receipt:${g.id}`,
+      module: 'PROCUREMENT' as const,
+      entityType: 'GoodsReceipt',
+      entityId: g.id,
+      title: `Quality ${g.qualityStatus === 'HOLD' ? 'hold' : 'failure'} — ${g.grnNumber} (${g.supplierPo.spoNumber})`,
+      description: `${sup.get(g.supplierPo.supplierId) ?? 'Supplier'} · procurement cannot complete until resolved.`,
+      severity: 'CRITICAL' as const,
+      dueAt: null,
+      context: [
+        {
+          label: 'Supplier',
+          value: sup.get(g.supplierPo.supplierId) ?? 'Supplier',
+        },
+        { label: 'Quality', value: g.qualityStatus.toLowerCase() },
+      ],
+      links: [
+        {
+          label: 'Open goods receipt',
+          href: `/procurement/receipts?grn=${g.id}`,
+        },
+        {
+          label: 'Open supplier PO',
+          href: `/procurement/orders/${g.supplierPoId}`,
+        },
+      ],
+      suggestedAction:
+        'Re-inspect, arrange replacement, or record a waiver with reason.',
+      requiredPermission: 'procurement.view',
+      factors: { severity: 'CRITICAL' as const, blocker: true },
+      metrics: { severity: 'CRITICAL' as const },
+      onDisappear: 'COMPLETED' as const,
+      refs: { supplierId: g.supplierPo.supplierId },
+    }));
+  }
+
+  private async supplierPayments(
+    sys: Actor,
+    rate: (amount: number, currency: string) => Promise<number | null>,
+  ): Promise<Signal[]> {
+    const out: Signal[] = [];
+    for (const {
+      payable: p,
+      installment: inst,
+    } of await this.procurement.dueInstallments(sys)) {
+      const days = inst.daysOverdue ?? 0;
+      const sev = days > 0 ? ('WARNING' as const) : ('INFO' as const);
+      const exposure = await rate(Number(inst.outstanding), p.currency);
+      out.push({
+        trigger: 'SUPPLIER_PAYMENT_DUE',
+        dedupeKey: `supplier_payment:${inst.id}:${inst.dueDate}`,
+        sourceEventId: `supplier_payable:${p.id}`,
+        module: 'PROCUREMENT',
+        entityType: 'SupplierPayable',
+        entityId: p.id,
+        title: `Supplier payment ${(inst.daysOverdue ?? 0) > 0 ? 'overdue' : 'due'} — ${p.supplier.legalName} ${p.currency} ${inst.outstanding}`,
+        description: `${p.supplierPo.spoNumber} · ${inst.label} due ${inst.dueDate}.`,
+        severity: sev,
+        dueAt: new Date(inst.dueDate!),
+        context: [
+          { label: 'Supplier', value: p.supplier.legalName },
+          { label: 'Installment', value: inst.label },
+        ],
+        links: [
+          {
+            label: 'Open supplier PO',
+            href: `/procurement/orders/${p.supplierPo.id}`,
+          },
+          { label: 'Payables', href: '/procurement/payables' },
+        ],
+        suggestedAction:
+          'Pay the supplier and record the payment with its bank reference.',
+        requiredPermission: 'supplier_payments.view',
+        factors: {
+          severity: sev,
+          exposure,
+          overdueDays: days,
+          deadlineDays: -days,
+        },
+        metrics: { severity: sev, daysOverdue: days, amount: exposure },
+        onDisappear: 'COMPLETED',
+        refs: { supplierId: p.supplier.id },
+      });
+    }
+    return out;
   }
 }

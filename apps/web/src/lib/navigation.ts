@@ -180,11 +180,12 @@ export const NAV_ITEMS: NavItem[] = [
     description: "Receivables, payments, shipment profitability and repeat business (operational finance, not accounting).",
   },
   {
-    label: "Suppliers & Procurement",
-    href: "/suppliers",
+    label: "Procurement",
+    href: "/procurement",
     icon: Truck,
-    status: "placeholder",
-    description: "Manage procurement and supplier sourcing.",
+    status: "active",
+    permission: "procurement.view",
+    description: "Suppliers, supplier RFQs and quotes, supplier POs, goods receipt, quality and supplier payables.",
   },
   {
     label: "Analytics",

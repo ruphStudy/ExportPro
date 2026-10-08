@@ -212,6 +212,11 @@ export const ALLOWED_ACTIONS: Record<ActionTrigger, AutomationActionType[]> = {
     'SUGGEST_FOLLOW_UP',
     'CREATE_CRM_TASK',
   ],
+  // Sprint 21 procurement signals — action items/notifications only.
+  SUPPLIER_DELIVERY_OVERDUE: ['CREATE_ACTION_ITEM', 'NOTIFY_IN_APP'],
+  SUPPLIER_QUOTE_OVERDUE: ['CREATE_ACTION_ITEM', 'NOTIFY_IN_APP'],
+  QUALITY_HOLD: ['CREATE_ACTION_ITEM', 'NOTIFY_IN_APP'],
+  SUPPLIER_PAYMENT_DUE: ['CREATE_ACTION_ITEM', 'NOTIFY_IN_APP'],
 };
 
 /** Actions that write to another module run only after a human approves (default). */
@@ -406,6 +411,43 @@ export const TEMPLATES: AutomationTemplate[] = [
     description:
       'Only saved (watchlist) opportunities above the score threshold.',
   },
+  {
+    key: 'supplier_delivery_overdue',
+    name: 'Supplier delivery overdue → procurement action',
+    triggerType: 'SUPPLIER_DELIVERY_OVERDUE',
+    actionType: 'CREATE_ACTION_ITEM',
+    conditions: { minDaysOverdue: 1 },
+    requiresApproval: false,
+    description: 'Issued supplier POs past their expected delivery date.',
+  },
+  {
+    key: 'supplier_quote_overdue',
+    name: 'Supplier quote overdue → procurement action',
+    triggerType: 'SUPPLIER_QUOTE_OVERDUE',
+    actionType: 'CREATE_ACTION_ITEM',
+    conditions: { minDaysOverdue: 1 },
+    requiresApproval: false,
+    description:
+      'Requested supplier quotes not received by the quote due date.',
+  },
+  {
+    key: 'quality_hold',
+    name: 'Quality hold / failed inspection → procurement action',
+    triggerType: 'QUALITY_HOLD',
+    actionType: 'CREATE_ACTION_ITEM',
+    conditions: {},
+    requiresApproval: false,
+    description: 'Goods receipts on quality hold or with failed inspection.',
+  },
+  {
+    key: 'supplier_payment_due',
+    name: 'Supplier payment due → finance action',
+    triggerType: 'SUPPLIER_PAYMENT_DUE',
+    actionType: 'CREATE_ACTION_ITEM',
+    conditions: {},
+    requiresApproval: false,
+    description: 'Supplier payable installments due within 7 days or overdue.',
+  },
 ];
 /** Templates switched on when an organization first opens the Action Center. */
 export const DEFAULT_ENABLED = new Set(
@@ -544,6 +586,36 @@ export function parseCommand(
     (m = /^(?:open|go to|show me the|navigate to)\s+(.+)$/i.exec(t))
   )
     return base('navigate', { module: clean(m[1]) });
+  // Sprint 21 procurement (read-only intents)
+  const srfq = ref(/SRFQ-\d{4}-\d{6}/i);
+  const spo = ref(/SPO-\d{4}-\d{6}/i);
+  if (
+    /supplier|vendor|procure/.test(l) &&
+    /(payment|payable|pay)\b|payments|due/.test(l) &&
+    !/record/.test(l)
+  )
+    return base('supplier_payments_due');
+  if (/compare/.test(l) && /(supplier|quote)/.test(l))
+    return base('compare_supplier_quotes', {
+      reference: srfq ?? ctx.reference ?? null,
+    });
+  if (/(find|search|show|look|who).*(supplier|manufacturer|vendor)s?/.test(l)) {
+    m =
+      /(?:suppliers?|manufacturers?|vendors?)\s+(?:for|of)\s+(.+?)(?:\s+in\s+(.+))?$/i.exec(
+        t,
+      );
+    return base('find_suppliers', {
+      product: clean(m?.[1]) ?? ctx.product ?? null,
+      country: clean(m?.[2]),
+    });
+  }
+  if (
+    spo ||
+    /procurement|supplier po|purchase from supplier|goods receipt|quality hold/.test(
+      l,
+    )
+  )
+    return base('procurement_status', { reference: spo });
   if (/record (a )?payment|payment received|mark .*paid/.test(l)) {
     const mo = money(t);
     return base('record_payment', {

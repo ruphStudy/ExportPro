@@ -41,6 +41,10 @@ import {
   variance,
 } from './finance-rules';
 import { ReceivablesService } from './receivables.service';
+import {
+  linkedSupplierPos,
+  procurementCost,
+} from '../procurement/procurement-cost';
 import type {
   AdjustmentDto,
   ConfirmNoneDto,
@@ -402,6 +406,66 @@ export class ProfitabilityService {
         derived: true,
         createdBy: null,
       });
+    }
+    // Sprint 21 — linked supplier POs are the single procurement-cost source
+    // (accepted goods + PO charges; supplier payments never added again).
+    const spos = await linkedSupplierPos(this.prisma, org, s);
+    if (spos.length) {
+      const manualProc = costs.filter(
+        (c) => c.category === 'PROCUREMENT' && !c.derived,
+      );
+      const source = manualProc.length
+        ? ((prof?.procurementSource as 'LINKED' | 'MANUAL' | null) ?? null)
+        : 'LINKED';
+      if (!source)
+        missing.push(
+          'Procurement source conflict — manual procurement cost and linked supplier POs both exist. Choose which one to use (manual is used until you decide).',
+        );
+      if (source === 'LINKED')
+        for (const c of manualProc) {
+          c.description = `${c.description} (excluded — linked supplier PO cost used)`;
+          c.reportingAmount = null;
+          c.derived = true;
+        }
+      for (const spo of spos) {
+        const pc = procurementCost(spo, null);
+        const used = source === 'LINKED';
+        let reporting: Dec | null = null;
+        let fx: FxBasis | null = null;
+        if (pc.actual) {
+          const c = await this.convert(
+            org,
+            spo.currency,
+            rep,
+            new D(pc.actual),
+          );
+          reporting = c.reporting;
+          fx = c.fx;
+          if (!c.reporting && used)
+            missing.push(
+              `FX rate ${spo.currency}→${rep} missing for supplier PO ${spo.spoNumber}.`,
+            );
+        }
+        if (used)
+          for (const m of pc.missing)
+            missing.push(`Procurement incomplete — ${m}.`);
+        costs.push({
+          id: null,
+          category: 'PROCUREMENT',
+          description: `Supplier PO ${spo.spoNumber} (accepted goods + PO charges)${used ? '' : ' — not used'}`,
+          amount: pc.actual ?? '0.00',
+          currency: spo.currency,
+          fx: spo.currency === rep ? null : fx,
+          reportingAmount: used && reporting ? m2(reporting) : null,
+          source: 'PROCUREMENT',
+          sourceReference: spo.spoNumber,
+          incurredAt: isoDay(spo.actualReceivedAt),
+          vendorName: null,
+          attachment: null,
+          derived: true,
+          createdBy: null,
+        });
+      }
     }
     // Bank charges recorded on payments.
     const booking = (rec?.bookingFx ?? null) as unknown as FxBasis | null;

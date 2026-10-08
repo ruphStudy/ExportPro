@@ -14,6 +14,7 @@ import { LogisticsModule } from '../logistics/logistics.module';
 import { OpportunitiesModule } from '../opportunities/opportunities.module';
 import { OutreachModule } from '../outreach/outreach.module';
 import { ProductAnalysisModule } from '../product-analysis/product-analysis.module';
+import { ProcurementModule } from '../procurement/procurement.module';
 import { ActionCenterService } from './action-center.service';
 import {
   ActionCenterController,
@@ -46,6 +47,7 @@ import { SignalsService } from './signals.service';
     OpportunitiesModule,
     OutreachModule,
     ProductAnalysisModule,
+    ProcurementModule,
   ],
   controllers: [
     AiManagerController,

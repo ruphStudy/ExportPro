@@ -83,7 +83,44 @@ export class AutomationService {
   /** Templates are installed once per organization (enabled/disabled per DEFAULT_ENABLED). */
   async ensureTemplates(org: string) {
     const s = await this.settings(org);
-    if (s.templatesSeeded) return;
+    if (s.templatesSeeded) {
+      // Templates added in later sprints are backfilled once (rules are never deleted, only disabled).
+      const have = await this.prisma.automationRule.findMany({
+        where: { organizationId: org, template: { not: null } },
+        select: { template: true },
+      });
+      const missing = TEMPLATES.filter(
+        (t) => !have.some((h) => h.template === t.key),
+      );
+      if (!missing.length) return;
+      await this.prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${'ops-templates:' + org}))`;
+        const again = await tx.automationRule.findMany({
+          where: {
+            organizationId: org,
+            template: { in: missing.map((t) => t.key) },
+          },
+          select: { template: true },
+        });
+        const add = missing.filter(
+          (t) => !again.some((h) => h.template === t.key),
+        );
+        if (add.length)
+          await tx.automationRule.createMany({
+            data: add.map((t) => ({
+              organizationId: org,
+              name: t.name,
+              triggerType: t.triggerType,
+              actionType: t.actionType,
+              conditions: t.conditions as Prisma.InputJsonValue,
+              requiresApproval: t.requiresApproval,
+              enabled: DEFAULT_ENABLED.has(t.key),
+              template: t.key,
+            })),
+          });
+      });
+      return;
+    }
     const n = await this.prisma.opsSettings.updateMany({
       where: { organizationId: org, templatesSeeded: false },
       data: { templatesSeeded: true },

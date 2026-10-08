@@ -14,6 +14,7 @@ import { CommercialTimeline, ReasonDialog, useCommercialMutation } from "@/compo
 import { PoComplianceCard, PoValidationCard } from "@/components/compliance/po-compliance-card";
 import { PoLogisticsCard } from "@/components/logistics/entry-cards";
 import { PoFinanceCard } from "@/components/finance/entry-cards";
+import { PoProcurementCard } from "@/components/procurement/entry-cards";
 import { RequirePermission } from "@/components/layout/require-permission";
 import { Badge } from "@/components/ui/badge";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
@@ -57,6 +58,7 @@ function PoView() {
           <PoValidationCard purchaseOrderId={d.id} />
           <PoLogisticsCard purchaseOrderId={d.id} accepted={d.status === "ACCEPTED"} />
           <PoFinanceCard purchaseOrderId={d.id} accepted={d.status === "ACCEPTED"} />
+          {d.status === "ACCEPTED" && <PoProcurementCard purchaseOrderId={d.id} />}
           <Attachments d={d} />
           <CommercialTimeline events={d.events} />
         </aside>

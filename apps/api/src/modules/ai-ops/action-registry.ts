@@ -226,6 +226,48 @@ export const AI_ACTIONS: Record<AiActionName, AiActionDefinition> = {
     input: z.object({}),
     output: 'KPIs and insights',
   },
+  find_suppliers: {
+    name: 'find_suppliers',
+    label: 'Find suppliers',
+    description:
+      'Suppliers in your supplier master for a product, with provenance and fit (no invented suppliers).',
+    kind: 'READ',
+    confirmationRequired: false,
+    permission: 'suppliers.view',
+    input: z.object({ product: opt, country: opt }),
+    output: 'supplier list with source/verification',
+  },
+  compare_supplier_quotes: {
+    name: 'compare_supplier_quotes',
+    label: 'Compare supplier quotes',
+    description:
+      'Normalized comparison of reviewed supplier quotes for a supplier RFQ (advisory only).',
+    kind: 'READ',
+    confirmationRequired: false,
+    permission: 'supplier_quotes.manage',
+    input: z.object({ reference: opt }),
+    output: 'comparison table + advisory note',
+  },
+  procurement_status: {
+    name: 'procurement_status',
+    label: 'Procurement status',
+    description: 'Open supplier POs, delays, receipts and quality holds.',
+    kind: 'READ',
+    confirmationRequired: false,
+    permission: 'procurement.view',
+    input: z.object({ reference: opt }),
+    output: 'procurement status',
+  },
+  supplier_payments_due: {
+    name: 'supplier_payments_due',
+    label: 'Supplier payments due',
+    description: 'Supplier payable installments due soon or overdue.',
+    kind: 'READ',
+    confirmationRequired: false,
+    permission: 'supplier_payments.view',
+    input: z.object({}),
+    output: 'payables due',
+  },
 };
 
 export const QUICK_COMMANDS = [
@@ -239,6 +281,7 @@ export const QUICK_COMMANDS = [
   { label: 'Check delayed shipments', command: 'Show delayed shipments' },
   { label: 'Check overdue payments', command: 'Show overdue payments' },
   { label: 'Show profitability', command: 'Show profitability' },
+  { label: 'Procurement status', command: 'Show procurement status' },
   { label: 'What needs attention?', command: 'What needs my attention?' },
 ];
 
@@ -298,6 +341,16 @@ export const MODULE_LINKS: Record<
     perm: 'repeat_business.view',
   },
   outreach: { label: 'Outreach', href: '/outreach', perm: 'outreach.view' },
+  procurement: {
+    label: 'Procurement',
+    href: '/procurement',
+    perm: 'procurement.view',
+  },
+  suppliers: {
+    label: 'Suppliers',
+    href: '/procurement/suppliers',
+    perm: 'suppliers.view',
+  },
   products: { label: 'Products', href: '/products', perm: 'products.view' },
   action: {
     label: 'Action Center',

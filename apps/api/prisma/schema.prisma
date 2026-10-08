@@ -523,18 +523,21 @@ model Organization {
   proformaInvoices       ProformaInvoice[]
   purchaseOrders         BuyerPurchaseOrder[]
 
-  createdAt             DateTime                @default(now())
-  updatedAt             DateTime                @updatedAt
-  financeSettings       FinanceSettings?
-  receivables           Receivable[]
-  shipmentActualCosts   ShipmentActualCost[]
-  shipmentProfitability ShipmentProfitability[]
-  reorderReminders      ReorderReminder[]
-  opsSettings           OpsSettings?
-  aiConversations       AiConversation[]
-  aiActionExecutions    AiActionExecution[]
-  actionItems           ActionItem[]
-  automationRules       AutomationRule[]
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  financeSettings        FinanceSettings?
+  receivables            Receivable[]
+  shipmentActualCosts    ShipmentActualCost[]
+  shipmentProfitability  ShipmentProfitability[]
+  reorderReminders       ReorderReminder[]
+  opsSettings            OpsSettings?
+  aiConversations        AiConversation[]
+  aiActionExecutions     AiActionExecution[]
+  actionItems            ActionItem[]
+  automationRules        AutomationRule[]
+  suppliers              Supplier[]
+  supplierRfqs           SupplierRfq[]
+  supplierPurchaseOrders SupplierPurchaseOrder[]
 
   @@map("organizations")
 }
@@ -4152,6 +4155,8 @@ model ShipmentProfitability {
   finalizedByUserId String?
   currentSnapshotId String?
   confirmedNone     String[]     @default([])
+  /// Sprint 21: which procurement actual is used — LINKED (supplier POs) or MANUAL.
+  procurementSource String?
   reopenedAt        DateTime?    @db.Timestamptz(3)
   reopenedByUserId  String?
   reopenReason      String?
@@ -4365,4 +4370,461 @@ model AutomationRun {
   @@unique([organizationId, dedupeKey])
   @@index([organizationId, createdAt])
   @@map("automation_runs")
+}
+
+// --- Sprint 21: supplier & procurement --------------------------------------
+// Supplier side only; never mixed with buyer inquiries/quotations/buyer POs.
+// Operational procurement finance — not an accounting ledger or GST system.
+
+model Supplier {
+  id                 String       @id @default(cuid())
+  organizationId     String
+  organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  legalName          String
+  tradeName          String?
+  normalizedName     String
+  supplierType       String?
+  state              String?
+  city               String?
+  address            String?
+  contactPerson      String?
+  email              String?
+  phone              String?
+  phoneKey           String?
+  website            String?
+  gstin              String?
+  pan                String?
+  notes              String?
+  source             String       @default("USER_ADDED")
+  sourceLabel        String?
+  verificationStatus String       @default("UNVERIFIED")
+  isDemo             Boolean      @default(false)
+  lastCheckedAt      DateTime?    @db.Timestamptz(3)
+  rowVersion         Int          @default(0)
+  createdByUserId    String
+  createdAt          DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime     @updatedAt @db.Timestamptz(3)
+
+  products       SupplierProduct[]
+  certifications SupplierCertification[]
+
+  @@unique([organizationId, gstin])
+  @@index([organizationId, normalizedName])
+  @@index([organizationId, state])
+  @@map("suppliers")
+}
+
+model SupplierProduct {
+  id              String   @id @default(cuid())
+  organizationId  String
+  supplierId      String
+  supplier        Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  productId       String?
+  productName     String
+  hsCode          String?
+  specification   String?
+  moq             Decimal? @db.Decimal(20, 4)
+  moqUnit         String?
+  capacity        Decimal? @db.Decimal(20, 4)
+  capacityUnit    String?
+  capacityPeriod  String?
+  indicativePrice Decimal? @db.Decimal(20, 4)
+  currency        String?
+  priceUnit       String?
+  leadTimeDays    Int?
+  packaging       String?
+  originState     String?
+  notes           String?
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([organizationId, productName])
+  @@map("supplier_products")
+}
+
+/// An uploaded certificate is evidence, not authentication (verification is explicit).
+model SupplierCertification {
+  id             String    @id @default(cuid())
+  organizationId String
+  supplierId     String
+  supplier       Supplier  @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  type           String
+  number         String?
+  issuingBody    String?
+  issueDate      DateTime? @db.Timestamptz(3)
+  expiryDate     DateTime? @db.Timestamptz(3)
+  verification   String    @default("NOT_PROVIDED")
+  attachmentId   String?
+  createdAt      DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @db.Timestamptz(3)
+
+  @@index([organizationId, type])
+  @@map("supplier_certifications")
+}
+
+/// Private files for suppliers, certifications, quotes and inspections.
+model SupplierAttachment {
+  id              String   @id @default(cuid())
+  organizationId  String
+  supplierId      String?
+  entityType      String
+  entityId        String
+  category        String
+  storageKey      String
+  filename        String
+  mimeType        String
+  sizeBytes       Int
+  createdByUserId String
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([organizationId, entityType, entityId])
+  @@map("supplier_attachments")
+}
+
+model SupplierShortlist {
+  id              String   @id @default(cuid())
+  organizationId  String
+  supplierId      String
+  /// Product context ("" = general shortlist).
+  productKey      String   @default("")
+  rfqId           String?
+  createdByUserId String
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+
+  @@unique([organizationId, supplierId, productKey])
+  @@map("supplier_shortlists")
+}
+
+model SupplierRfq {
+  id                     String       @id @default(cuid())
+  organizationId         String
+  organization           Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  rfqNumber              String
+  status                 String       @default("DRAFT")
+  productId              String?
+  productName            String
+  specification          String?
+  baseQuantity           Decimal?     @db.Decimal(20, 4)
+  wastagePercent         Decimal?     @db.Decimal(8, 4)
+  quantity               Decimal      @db.Decimal(20, 4)
+  unit                   String
+  requiredBy             DateTime?    @db.Timestamptz(3)
+  quoteDueDate           DateTime?    @db.Timestamptz(3)
+  deliveryLocation       String?
+  packaging              String?
+  qualityRequirements    String?
+  certificationsRequired String[]     @default([])
+  paymentTermsRequested  String?
+  validUntil             DateTime?    @db.Timestamptz(3)
+  notes                  String?
+  buyerPurchaseOrderId   String?
+  shipmentId             String?
+  opportunityId          String?
+  selectedSupplierId     String?
+  selectedQuoteId        String?
+  selectedByUserId       String?
+  selectedAt             DateTime?    @db.Timestamptz(3)
+  selectionReason        String?
+  closedReason           String?
+  rowVersion             Int          @default(0)
+  createdByUserId        String
+  createdAt              DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt              DateTime     @updatedAt @db.Timestamptz(3)
+
+  recipients SupplierRfqRecipient[]
+  quotes     SupplierQuote[]
+
+  @@unique([organizationId, rfqNumber])
+  @@index([organizationId, status])
+  @@map("supplier_rfqs")
+}
+
+model SupplierRfqRecipient {
+  id               String      @id @default(cuid())
+  organizationId   String
+  rfqId            String
+  rfq              SupplierRfq @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  supplierId       String
+  status           String      @default("INVITED")
+  requestedAt      DateTime?   @db.Timestamptz(3)
+  requestedVia     String?
+  recordedByUserId String?
+  createdAt        DateTime    @default(now()) @db.Timestamptz(3)
+
+  @@unique([rfqId, supplierId])
+  @@map("supplier_rfq_recipients")
+}
+
+model SupplierQuote {
+  id                     String      @id @default(cuid())
+  organizationId         String
+  rfqId                  String
+  rfq                    SupplierRfq @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  supplierId             String
+  quoteReference         String?
+  /// Idempotency for imports/retries: one quote per supplier + reference per RFQ.
+  referenceKey           String
+  quoteDate              DateTime?   @db.Timestamptz(3)
+  validUntil             DateTime?   @db.Timestamptz(3)
+  quantity               Decimal?    @db.Decimal(20, 4)
+  unit                   String
+  unitPrice              Decimal     @db.Decimal(20, 4)
+  currency               String
+  priceBasis             String      @default("EX_FACTORY")
+  moq                    Decimal?    @db.Decimal(20, 4)
+  moqUnit                String?
+  leadTimeDays           Int?
+  capacity               Decimal?    @db.Decimal(20, 4)
+  capacityUnit           String?
+  capacityPeriod         String?
+  deliveryTerms          String?
+  paymentTerms           String?
+  packaging              String?
+  taxPercent             Decimal?    @db.Decimal(8, 4)
+  taxIncluded            Boolean?
+  packagingPerUnit       Decimal?    @db.Decimal(20, 4)
+  inlandTransportPerUnit Decimal?    @db.Decimal(20, 4)
+  inspectionTotal        Decimal?    @db.Decimal(20, 2)
+  otherTotal             Decimal?    @db.Decimal(20, 2)
+  certificationsOffered  String[]    @default([])
+  specificationOffered   String?
+  notes                  String?
+  review                 String      @default("PENDING_REVIEW")
+  reviewedByUserId       String?
+  reviewedAt             DateTime?   @db.Timestamptz(3)
+  status                 String      @default("RECORDED")
+  rowVersion             Int         @default(0)
+  createdByUserId        String
+  createdAt              DateTime    @default(now()) @db.Timestamptz(3)
+  updatedAt              DateTime    @updatedAt @db.Timestamptz(3)
+
+  @@unique([rfqId, supplierId, referenceKey])
+  @@map("supplier_quotes")
+}
+
+model SupplierPurchaseOrder {
+  id                        String       @id @default(cuid())
+  organizationId            String
+  organization              Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  spoNumber                 String
+  revision                  Int          @default(1)
+  status                    String       @default("DRAFT")
+  procurementStatus         String       @default("NOT_ORDERED")
+  supplierId                String
+  rfqId                     String?
+  quoteId                   String?
+  buyerPurchaseOrderId      String?
+  shipmentId                String?
+  currency                  String
+  poDate                    DateTime?    @db.Timestamptz(3)
+  packagingCost             Decimal?     @db.Decimal(20, 2)
+  inlandTransportCost       Decimal?     @db.Decimal(20, 2)
+  inspectionCost            Decimal?     @db.Decimal(20, 2)
+  otherCharges              Decimal?     @db.Decimal(20, 2)
+  taxAmount                 Decimal?     @db.Decimal(20, 2)
+  subtotal                  Decimal?     @db.Decimal(20, 2)
+  totalAmount               Decimal?     @db.Decimal(20, 2)
+  deliveryLocation          String?
+  originalExpectedDate      DateTime?    @db.Timestamptz(3)
+  expectedDate              DateTime?    @db.Timestamptz(3)
+  actualReceivedAt          DateTime?    @db.Timestamptz(3)
+  paymentTerms              String?
+  paymentSchedule           Json         @default("[]")
+  qualityRequirements       String?
+  certificationRequirements String[]     @default([])
+  notes                     String?
+  issuedAt                  DateTime?    @db.Timestamptz(3)
+  issuedByUserId            String?
+  snapshot                  Json?
+  revisions                 Json         @default("[]")
+  externallySentAt          DateTime?    @db.Timestamptz(3)
+  externallySentVia         String?
+  externallySentByUserId    String?
+  dispatchedAt              DateTime?    @db.Timestamptz(3)
+  completedAt               DateTime?    @db.Timestamptz(3)
+  cancelReason              String?
+  rowVersion                Int          @default(0)
+  createdByUserId           String
+  createdAt                 DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt                 DateTime     @updatedAt @db.Timestamptz(3)
+
+  items    SupplierPurchaseOrderItem[]
+  events   ProcurementEvent[]
+  receipts GoodsReceipt[]
+  payable  SupplierPayable?
+
+  @@unique([organizationId, spoNumber])
+  @@index([organizationId, status])
+  @@index([organizationId, buyerPurchaseOrderId])
+  @@index([organizationId, shipmentId])
+  @@map("supplier_purchase_orders")
+}
+
+model SupplierPurchaseOrderItem {
+  id               String                @id @default(cuid())
+  organizationId   String
+  supplierPoId     String
+  supplierPo       SupplierPurchaseOrder @relation(fields: [supplierPoId], references: [id], onDelete: Cascade)
+  sortOrder        Int                   @default(0)
+  productId        String?
+  productName      String
+  specification    String?
+  quantity         Decimal               @db.Decimal(20, 4)
+  unit             String
+  unitPrice        Decimal               @db.Decimal(20, 4)
+  taxPercent       Decimal?              @db.Decimal(8, 4)
+  receivedQuantity Decimal               @default(0) @db.Decimal(20, 4)
+  damagedQuantity  Decimal               @default(0) @db.Decimal(20, 4)
+  acceptedQuantity Decimal               @default(0) @db.Decimal(20, 4)
+  rejectedQuantity Decimal               @default(0) @db.Decimal(20, 4)
+
+  @@map("supplier_purchase_order_items")
+}
+
+/// Status and expected-delivery history (originals preserved).
+model ProcurementEvent {
+  id              String                @id @default(cuid())
+  organizationId  String
+  supplierPoId    String
+  supplierPo      SupplierPurchaseOrder @relation(fields: [supplierPoId], references: [id], onDelete: Cascade)
+  type            String
+  fromValue       String?
+  toValue         String?
+  reason          String?
+  createdByUserId String?
+  createdAt       DateTime              @default(now()) @db.Timestamptz(3)
+
+  @@index([supplierPoId, createdAt])
+  @@map("procurement_events")
+}
+
+model GoodsReceipt {
+  id                String                @id @default(cuid())
+  organizationId    String
+  grnNumber         String
+  supplierPoId      String
+  supplierPo        SupplierPurchaseOrder @relation(fields: [supplierPoId], references: [id], onDelete: Cascade)
+  receivedAt        DateTime              @db.Timestamptz(3)
+  location          String?
+  receivedByUserId  String
+  notes             String?
+  overReceiptReason String?
+  qualityStatus     String                @default("PENDING")
+  idempotencyKey    String?
+  createdAt         DateTime              @default(now()) @db.Timestamptz(3)
+
+  items       GoodsReceiptItem[]
+  inspections QualityInspection[]
+
+  @@unique([organizationId, grnNumber])
+  @@unique([organizationId, idempotencyKey])
+  @@map("goods_receipts")
+}
+
+model GoodsReceiptItem {
+  id               String       @id @default(cuid())
+  organizationId   String
+  goodsReceiptId   String
+  goodsReceipt     GoodsReceipt @relation(fields: [goodsReceiptId], references: [id], onDelete: Cascade)
+  supplierPoItemId String
+  receivedQuantity Decimal      @db.Decimal(20, 4)
+  damagedQuantity  Decimal      @default(0) @db.Decimal(20, 4)
+  acceptedQuantity Decimal      @default(0) @db.Decimal(20, 4)
+  rejectedQuantity Decimal      @default(0) @db.Decimal(20, 4)
+
+  @@map("goods_receipt_items")
+}
+
+/// Lightweight inspection (not a laboratory system).
+model QualityInspection {
+  id                 String       @id @default(cuid())
+  organizationId     String
+  goodsReceiptId     String
+  goodsReceipt       GoodsReceipt @relation(fields: [goodsReceiptId], references: [id], onDelete: Cascade)
+  goodsReceiptItemId String?
+  inspectedAt        DateTime     @db.Timestamptz(3)
+  inspectorUserId    String
+  status             String
+  checks             Json         @default("[]")
+  acceptedQuantity   Decimal      @db.Decimal(20, 4)
+  rejectedQuantity   Decimal      @db.Decimal(20, 4)
+  reason             String?
+  notes              String?
+  rowVersion         Int          @default(0)
+  createdAt          DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime     @updatedAt @db.Timestamptz(3)
+
+  @@map("quality_inspections")
+}
+
+/// Supplier-side payable (distinct from buyer receivables).
+model SupplierPayable {
+  id                String                @id @default(cuid())
+  organizationId    String
+  supplierPoId      String                @unique
+  supplierPo        SupplierPurchaseOrder @relation(fields: [supplierPoId], references: [id], onDelete: Cascade)
+  supplierId        String
+  currency          String
+  totalAmount       Decimal               @db.Decimal(20, 2)
+  paidAmount        Decimal               @default(0) @db.Decimal(20, 2)
+  outstandingAmount Decimal               @db.Decimal(20, 2)
+  state             String                @default("OPEN")
+  disputedAt        DateTime?             @db.Timestamptz(3)
+  disputeReason     String?
+  rowVersion        Int                   @default(0)
+  createdAt         DateTime              @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime              @updatedAt @db.Timestamptz(3)
+
+  installments SupplierPayableInstallment[]
+  payments     SupplierPayment[]
+
+  @@index([organizationId, state])
+  @@map("supplier_payables")
+}
+
+model SupplierPayableInstallment {
+  id                String          @id @default(cuid())
+  organizationId    String
+  payableId         String
+  payable           SupplierPayable @relation(fields: [payableId], references: [id], onDelete: Cascade)
+  sequence          Int
+  label             String
+  percentage        Decimal?        @db.Decimal(8, 4)
+  amount            Decimal         @db.Decimal(20, 2)
+  trigger           String
+  dueDays           Int?
+  fixedDate         DateTime?       @db.Timestamptz(3)
+  paidAmount        Decimal         @default(0) @db.Decimal(20, 2)
+  outstandingAmount Decimal         @db.Decimal(20, 2)
+
+  @@unique([payableId, sequence])
+  @@map("supplier_payable_installments")
+}
+
+/// Never deleted or edited — mistakes are reversed with a reason.
+model SupplierPayment {
+  id               String          @id @default(cuid())
+  organizationId   String
+  payableId        String
+  payable          SupplierPayable @relation(fields: [payableId], references: [id], onDelete: Cascade)
+  amount           Decimal         @db.Decimal(20, 2)
+  currency         String
+  appliedAmount    Decimal         @db.Decimal(20, 2)
+  fxRate           Decimal?        @db.Decimal(24, 10)
+  paidAt           DateTime        @db.Timestamptz(3)
+  method           String
+  reference        String?
+  referenceKey     String?
+  bankName         String?
+  notes            String?
+  allocations      Json
+  status           String          @default("RECORDED")
+  reversalReason   String?
+  reversedByUserId String?
+  reversedAt       DateTime?       @db.Timestamptz(3)
+  recordedByUserId String
+  createdAt        DateTime        @default(now()) @db.Timestamptz(3)
+
+  @@unique([payableId, referenceKey])
+  @@map("supplier_payments")
 }

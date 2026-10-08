@@ -35,6 +35,7 @@ import { Select } from "@/components/ui/select";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { Caption, HelperText, PageTitle, SectionTitle } from "@/components/ui/typography";
+import { FindSuppliersButton } from "@/components/procurement/shared";
 
 export default function ProductDetailPage() {
   return (
@@ -123,6 +124,7 @@ function ProductDetailContent() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
+          <FindSuppliersButton product={p.displayName} productId={p.id} size="md" />
           {canUpdate && (
             <Button variant="outline" onClick={() => setEditOpen(true)}>
               <Pencil className="size-4" aria-hidden="true" />

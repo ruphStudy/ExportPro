@@ -26,6 +26,10 @@ export const AI_ACTION_NAMES = [
   "follow_ups_today",
   "needs_attention",
   "analytics_summary",
+  "find_suppliers",
+  "compare_supplier_quotes",
+  "procurement_status",
+  "supplier_payments_due",
 ] as const;
 export type AiActionName = (typeof AI_ACTION_NAMES)[number];
 export type AiActionKind = "READ" | "WRITE";
@@ -147,11 +151,15 @@ export const ACTION_TRIGGERS = [
   "NEW_OPPORTUNITY",
   "CRM_TASK_OVERDUE",
   "SAMPLE_DELIVERED",
+  "SUPPLIER_DELIVERY_OVERDUE",
+  "SUPPLIER_QUOTE_OVERDUE",
+  "QUALITY_HOLD",
+  "SUPPLIER_PAYMENT_DUE",
 ] as const;
 export type ActionTrigger = (typeof ACTION_TRIGGERS)[number];
 export type ActionItemState = "OPEN" | "IN_PROGRESS" | "SNOOZED" | "COMPLETED" | "DISMISSED" | "EXPIRED";
 export type ActionPriority = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
-export type ActionModule = "CRM" | "OUTREACH" | "FINANCE" | "LOGISTICS" | "COMPLIANCE" | "DOCUMENTS" | "COMMERCIAL" | "OPPORTUNITIES" | "INQUIRIES";
+export type ActionModule = "CRM" | "OUTREACH" | "FINANCE" | "LOGISTICS" | "COMPLIANCE" | "DOCUMENTS" | "COMMERCIAL" | "OPPORTUNITIES" | "INQUIRIES" | "PROCUREMENT";
 
 export interface ActionItemView {
   id: string;

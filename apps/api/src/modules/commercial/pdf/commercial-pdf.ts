@@ -7,7 +7,9 @@ import { type JpegImage, PdfDoc, wrap } from './pdf-writer';
  * notes, so internal costing data cannot reach the document.
  */
 export interface CommercialPdfInput {
-  title: 'QUOTATION' | 'PROFORMA INVOICE';
+  title: 'QUOTATION' | 'PROFORMA INVOICE' | 'PURCHASE ORDER';
+  /** Recipient label; defaults to buyer (Sprint 21 supplier POs pass 'Supplier'). */
+  partyLabel?: string;
   number: string;
   draft: boolean;
   issueDate: string | null;
@@ -129,7 +131,9 @@ export function renderCommercialPdf(
   y += 14;
 
   // Buyer + commercial terms
-  pdf.text(L, y, 'To (buyer)', 8.5, { bold: true });
+  pdf.text(L, y, `To (${(d.partyLabel ?? 'buyer').toLowerCase()})`, 8.5, {
+    bold: true,
+  });
   pdf.text(320, y, 'Commercial terms', 8.5, { bold: true });
   y += 12;
   const buyerLines = [
